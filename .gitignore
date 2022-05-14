@@ -1,2 +1,12 @@
-git.png
-create_characters.py
+*.png
+*.mp4
+*.mov
+*.avi
+*.mpg
+*.mpeg
+*.wmv
+*.flv
+*.swf
+*.mkv
+ascii/*
+__pycache__/*

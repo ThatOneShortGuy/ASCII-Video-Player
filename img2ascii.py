@@ -2,7 +2,7 @@ from PIL import Image, ImageOps
 import sys
 import json
 
-SIZE = 128, 200
+SIZE = 236, 60
 
 
 def load_ascii_map(filename):
@@ -11,9 +11,9 @@ def load_ascii_map(filename):
     return {int(k): v for k, v in m.items()}
 
 
-def img2ascii(img, ascii_map):
+def img2ascii(img, ascii_map, size=SIZE):
     s = ''
-    img.thumbnail(SIZE, Image.ANTIALIAS)
+    img = img.resize(size)
     h, w = img.size
     img = ImageOps.mirror(img)
     img = img.rotate(90, expand=1).load()
