@@ -2,7 +2,7 @@ from PIL import Image, ImageOps
 import sys
 import json
 
-SIZE = 236, 60
+SIZE = 130, 65
 
 
 def load_ascii_map(filename):

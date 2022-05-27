@@ -3,10 +3,18 @@ from PIL import Image, ImageOps
 import os
 import json
 
-m = []
+m = [(np.mean(ImageOps.grayscale(Image.open(f'ascii\\{i}'))), chr(int(i[:-4]))) for i in os.listdir('ascii')]
 
-for i in os.listdir('ascii'):
-    m.append((np.mean(ImageOps.grayscale(Image.open(f'ascii\\{i}'))), chr(int(i[:-4]))))
+
+m.append((254.8, '█'))
+m.append((131.5263, '■'))
+m.append((194.899, '▓'))
+m.append((67.499789, '▒'))
+m.append((34.1162, '░'))
+m.append((84.73, '╬'))
+m.append((207.0305, '◘'))
+m.append((100.588, '◙'))
+m.append((79.2804, '¶'))
 
 arr, char = zip(*m)
 arr = np.array(arr)

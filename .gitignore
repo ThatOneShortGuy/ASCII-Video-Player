@@ -8,5 +8,6 @@
 *.flv
 *.swf
 *.mkv
+temp/*
 ascii/*
 __pycache__/*
