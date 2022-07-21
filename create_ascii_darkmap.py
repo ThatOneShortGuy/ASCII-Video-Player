@@ -1,7 +1,6 @@
 import numpy as np
 from PIL import Image, ImageOps
 import os
-import json
 
 m = [(np.mean(ImageOps.grayscale(Image.open(f'ascii\\{i}'))), chr(int(i[:-4]))) for i in os.listdir('ascii')]
 
@@ -34,7 +33,10 @@ for i in range(256):
                 m[i] = arr[i-j]
                 break
 
-m = {str(k): v for k, v in m.items()}
+arr = [None] * 256
+for i, e in m.items():
+    arr[i] = e
 
-with open('ascii_darkmap.json', 'w') as f:
-    json.dump(m, f)
+with open('ascii_darkmap.dat', 'wb') as f:
+    for e in arr:
+        f.write(ord(e).to_bytes(2, 'big'))

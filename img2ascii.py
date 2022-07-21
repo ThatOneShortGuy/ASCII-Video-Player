@@ -1,27 +1,22 @@
-from PIL import Image, ImageOps
+from PIL import Image
 import sys
-import json
+import numpy as np
+
 
 SIZE = 130, 65
 
 
 def load_ascii_map(filename):
-    with open(filename) as f:
-        m = json.load(f)
-    return {int(k): v for k, v in m.items()}
+    with open(filename, 'rb') as f:
+        arr = [chr(int.from_bytes(f.read(2), 'big')) for _ in range(256)]
+    return np.array(arr)
 
 
 def img2ascii(img, ascii_map, size=SIZE):
-    s = ''
     img = img.resize(size)
     h, w = img.size
-    img = ImageOps.mirror(img)
-    img = img.rotate(90, expand=1).load()
-    for i in range(w):
-        for j in range(h):
-            s += ascii_map[img[i, j]]
-        s += '\n'
-    return s
+    img = np.array(img)
+    return ''.join(''.join(map(lambda x: ascii_map[x], img[i])) + '\n' for i in range(w))
 
 
 if __name__ == "__main__":
@@ -29,6 +24,6 @@ if __name__ == "__main__":
         sys.argv.append('git.png')
     img = Image.open(sys.argv[1])
     img = img.convert('L')
-    ascii_map = load_ascii_map('ascii_darkmap.json')
+    ascii_map = load_ascii_map('ascii_darkmap.dat')
     s = img2ascii(img, ascii_map)
     print(s)

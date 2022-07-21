@@ -11,3 +11,5 @@
 temp/*
 ascii/*
 __pycache__/*
+*.dll
+ffmpeg.exe
