@@ -43,12 +43,13 @@ def read_video(video_path, fps=None):
 
 
 def show_video(path, fps=55, size=SIZE):
+    ifps = 1 / fps
     ascii_map = load_ascii_map('ascii_darkmap.dat')
     start = perf_counter()
     for frame in read_video(path, fps):
         frame = frame.convert('L')
         s = img2ascii(frame, ascii_map, size)
-        while ((end := perf_counter()) - start) * fps < 1:
+        while ((end := perf_counter()) - start) < ifps:
             pass
         start = end
         # st = perf_counter()
