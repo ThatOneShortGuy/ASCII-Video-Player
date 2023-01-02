@@ -48,7 +48,7 @@ def show_video(path, fps=55, size=SIZE):
     for frame in read_video(path, fps):
         frame = frame.convert('L')
         s = img2ascii(frame, ascii_map, size)
-        while (end := perf_counter()) - start < (1 / (fps)):
+        while ((end := perf_counter()) - start) * fps < 1:
             pass
         start = end
         # st = perf_counter()
