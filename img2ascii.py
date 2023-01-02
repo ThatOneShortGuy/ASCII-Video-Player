@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 
-SIZE = 130, 65
+SIZE = 250, 53
 
 
 def load_ascii_map(filename):
