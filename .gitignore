@@ -13,3 +13,5 @@ ascii/*
 __pycache__/*
 *.dll
 ffmpeg.exe
+.vscode
+*.exe
