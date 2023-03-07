@@ -15,3 +15,5 @@ __pycache__/*
 ffmpeg.exe
 .vscode
 *.exe
+build/*
+*.pyd
