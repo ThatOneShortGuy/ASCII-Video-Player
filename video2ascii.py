@@ -71,16 +71,19 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE):
 if __name__ == "__main__":
     usage = '''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
-        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 (default: 22),
-        -fps <fps>, -r <fps> : Framerate of the output video (default: 30),
-        -s <width>,<height> : Size of the output video (default: 188,40),
+        --clean : Clean the temporary files before and after the program is done running (default: False)
+        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 (default: 22)
+        -fps <fps>, -r <fps> : Framerate of the output video (default: 30)
+        -s <width>,<height> : Size of the output video (default: 188,40)
         -h : Show this help message'''
     video_path = 'crf18.pm4'
+    clean = False
     freq = COLOR_SAMPLE_FREQ
     w, h = SIZE
     fps = 30
     if len(sys.argv) < 2:
         print(usage)
+        sys.exit(0)
     video_path = sys.argv.pop(1)
     if not os.path.isfile(video_path):
         print(f'File "{video_path}" not found')
@@ -93,6 +96,10 @@ if __name__ == "__main__":
             w, h = map(int, sys.argv.pop(1).split(','))
         elif val in ('-fps', '-r'):
             fps = int(sys.argv.pop(1))
+        elif val in ('--clean'):
+            if os.path.exists('temp'):
+                shutil.rmtree('temp')
+            clean = True
         else:
             print(usage)
             sys.exit(0)
@@ -100,4 +107,6 @@ if __name__ == "__main__":
     try:
         show_video(video_path, fps, freq=freq, size=(w, h))
     finally:
+        if clean:
+            shutil.rmtree('temp')
         print('\033[0m')

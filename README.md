@@ -49,6 +49,7 @@ python vid2ascii.py <video path> [options]
 
 ### Options
 - `-h`: Show help message and exit
+- `--clean`: Clean the temporary files before and after the program is done running (default: False)
 - `-c <freq>`, `-f <freq>`: Color frequency. The higher the integer, the more space between the sampled colors. (default: 22)
 - `-fps <fps>, -r <fps>`: Frames per second. The framerate to play the video back at (default: 30)
 - `-s <width>,<height>`: Size of the output video. Should be input as "width,height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 188,40)
