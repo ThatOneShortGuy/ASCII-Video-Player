@@ -1,4 +1,4 @@
-from img2ascii import img2ascii, load_ascii_map, get_color_samples, calc_ratio
+from img2ascii import img2ascii, load_ascii_map, get_color_samples, map_color
 from random import randint
 from cimg2ascii import cmap_color
 import sys
@@ -12,18 +12,31 @@ import vlc
 os.add_dll_directory(os.getcwd())
 
 SIZE = 188, 40
-COLOR_SAMPLE_FREQ = 22
+COLOR_SAMPLE_FREQ = 16
+
+def get_vid_dim(path):
+    cap = cv2.VideoCapture(path)
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+    return w, h
 
 def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE):
     """
     Reads a video file and returns a list of frames using ffmpeg
     """
+    if size[0] == -1:
+        w, h = get_vid_dim(video_path)
+        size = int(w * size[1] / h *2), size[1]
+    elif size[1] == -1:
+        w, h = get_vid_dim(video_path)
+        size = size[0], int(h * size[0] / w / 2)
+
     try:
         if not os.path.exists('temp'):
             os.mkdir('temp')
             os.system(f'ffmpeg -y -i "{video_path}" -vn temp/out.flac')
-            os.system(
-                f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 {f"-vf fps={fps},scale={size[0]}:{size[1]} " if fps else ""}temp/%08d.png')
+            os.system(f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]} temp/%08d.png')
 
         try:
             img = 1
@@ -33,8 +46,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE):
             p.play()
             while True:
                 read_img = cv2.imread(f'temp/{img:08d}.png')
-                colors = get_color_samples(read_img, freq)
-                yield cv2.cvtColor(read_img, cv2.COLOR_BGR2GRAY), colors
+                yield read_img
                 # os.remove(f'temp/{img:08d}.jpg')
                 img += 1
         except Exception:
@@ -50,14 +62,20 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE):
     ifps = 1 / fps
     ascii_map = load_ascii_map('ascii_darkmap.dat')
     start = perf_counter()
-    for frame, colors in read_video(path, fps, freq=freq, size=size):
-
+    for frame in read_video(path, fps, freq=freq, size=size):
+        if frame is None:
+            break
+        colors = get_color_samples(frame, freq)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = img2ascii(frame, ascii_map)
         # s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n'
-        global COLOR_SAMPLE_FREQ
-        s = cmap_color(s, colors, frame.shape[1], COLOR_SAMPLE_FREQ)
-        # COLOR_SAMPLE_FREQ = 34
-        # COLOR_SAMPLE_FREQ = randint(22, 30)
+        s = cmap_color(s, colors, frame.shape[1]+1, freq, 1)
+        # print(f'S: {len(s)}, freq: {freq}')
+        if len(s) > 15500:
+            freq += 1
+        elif len(s) < 13000:
+            freq -= 1
+        freq = max(1, freq)
         thread = Thread(target=sys.stdout.write, args=(s,))
         while ((end := perf_counter()) - start) < ifps:
             pass
@@ -72,7 +90,7 @@ if __name__ == "__main__":
     usage = '''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
         --clean : Clean the temporary files before and after the program is done running (default: False)
-        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 (default: 22)
+        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 (default: 16)
         -fps <fps>, -r <fps> : Framerate of the output video (default: 30)
         -s <width>,<height> : Size of the output video (default: 188,40)
         -h : Show this help message'''
@@ -107,6 +125,6 @@ if __name__ == "__main__":
     try:
         show_video(video_path, fps, freq=freq, size=(w, h))
     finally:
-        if clean:
-            shutil.rmtree('temp')
+        # if clean:
+        #     shutil.rmtree('temp')
         print('\033[0m')

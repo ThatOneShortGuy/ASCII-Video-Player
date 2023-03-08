@@ -1,11 +1,11 @@
 import cv2
 import sys
 import os
-from cimg2ascii import cmap_color
+from cimg2ascii import cmap_color, cmap_color_old
 
 os.system("")
 
-SIZE = 266, 61
+SIZE = 266,61
 COLOR_SAMPLE_FREQ = 2
 
 def load_ascii_map(filename):
@@ -18,16 +18,14 @@ def img2ascii(img, ascii_map):
     w, h = img.shape
     return ''.join(''.join(map(lambda x: ascii_map[x], img[i])) + '\n' for i in range(w))
 
-def get_color_samples(img, freq=COLOR_SAMPLE_FREQ):
+def get_color_samples(img, freq=COLOR_SAMPLE_FREQ, offset=0):
     w, h, _ = img.shape
-    # ret = []
-    # for i in range(COLOR_SAMPLE_FREQ, w * h, COLOR_SAMPLE_FREQ):
-    #     div, mod = divmod(i, h)
-    #     ret.append(img[div, mod])
+    color_locs = tuple(i for i in range(offset % freq, h, freq))
+    return img[:, color_locs].reshape((w*len(color_locs),3)).tolist()
         
-    return [tuple(img[divmod(i, h)]) for i in range(freq, w * h, freq)]
+    # return [tuple(img[divmod(i, h)]) for i in range(freq, w * h, freq)]
 
-def map_color(s, colors, h, freq=COLOR_SAMPLE_FREQ):
+def map_color_old(s, colors, h, freq=COLOR_SAMPLE_FREQ):
     ns = ''
     j = 0
     for i in range(len(s)):
@@ -40,13 +38,27 @@ def map_color(s, colors, h, freq=COLOR_SAMPLE_FREQ):
         j += (i % h)!= 0
     return ns
 
+def map_color(s, colors, line_len, freq=COLOR_SAMPLE_FREQ):
+    ns = ''
+    j = 0
+    for i in range(len(s)):
+        if s[i] == '\n' or (i % line_len) % freq:
+            ns += s[i]
+            continue
+        b, g, r = colors[j]
+        ns += f'\033[38;2;{r};{g};{b}m{s[i]}'
+        j += 1
+    return ns
+
 def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ):
     colors = get_color_samples(img, freq)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     w, h = img.shape
     s = img2ascii(img, ascii_map)
     # s = '\n'.join('█' * h for _ in range(w)) + '\n'
-    return cmap_color(s, colors, h, freq)
+    old = map_color(s, colors, h+1, freq)
+    new = cmap_color(s, colors, h+1, freq, 0)
+    return new
 
 def calc_ratio(w, h, img):
     iw, ih = img.shape[:2]
@@ -57,10 +69,10 @@ def calc_ratio(w, h, img):
     return w, h
 
 if __name__ == "__main__":
-    inp_file = 'git.png'
+    input_file = 'git.png'
     freq = COLOR_SAMPLE_FREQ
     w, h = SIZE
-    input_file = sys.argv.pop(1)
+    input_file = sys.argv.pop(1) if len(sys.argv) > 1 else input_file
     if not os.path.isfile(input_file):
         print(f'File "{input_file}" not found')
         sys.exit(1)
