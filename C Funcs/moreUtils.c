@@ -1,9 +1,66 @@
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#ifndef INCLUDES
+#define INCLUDES
 
 #include <Python.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <numpy/arrayobject.h>
+
+#endif
+
+typedef struct {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+} pixel;
+
+void compute_row(pixel *output, int i, int wfreq, int h, int w, int freq, PyObject *img) {
+    // printf("i: %d, wfreq: %d, h: %d, w: %d, freq: %d\n", i, wfreq, h, w, freq);
+
+    int j, k;
+    int r, g, b;
+    // printf("i: %d, wfreq: %d, h: %d, w: %d, freq: %d\n", i, wfreq, h, w, freq);
+    for (j = 0; j < wfreq; j++) {// for j in range(ceil(w/freq)):
+        // Take the average of the next `freq` pixels
+        // printf("i: %d, j: %d\n", i, j);
+        r = 0;g = 0;b = 0;
+        for (k = 0; k < freq; k++) {
+            if (j * freq + k >= w) break;
+            r += *(unsigned char *) PyArray_GETPTR3(img, i, j * freq + k, 0);
+            g += *(unsigned char *) PyArray_GETPTR3(img, i, j * freq + k, 1);
+            b += *(unsigned char *) PyArray_GETPTR3(img, i, j * freq + k, 2);
+            // printf("r: %d, g: %d, b: %d, k: %d\n", r, g, b, k);
+        }
+        r /= k;
+        g /= k;
+        b /= k;
+        // printf("i: %d, j: %d | r: %d, g: %d, b: %d\n\n",i, j, r, g, b);
+
+        // Add the average to the output list
+        output[i * wfreq + j].r = r;
+        output[i * wfreq + j].g = g;
+        output[i * wfreq + j].b = b;
+    }
+}
+
+pixel *get_color_samples(PyObject *img, int freq) {
+    int h = (int) PyArray_DIM(img, 0);
+    int w = (int) PyArray_DIM(img, 1);
+
+    int i;
+    int wfreq = (int) ceil((double) w / (double) freq);
+
+    pixel *output = (pixel *) malloc(h * wfreq * sizeof(pixel));
+
+    for (i = 0; i < h; i++) { // for i in range(h):
+        compute_row(output, i, wfreq, h, w, freq, img);
+    }
+
+    // printf("Finished\n");
+    // for (i = 0; i < h*wfreq; i++) printf("output[%d]: %d, %d, %d\n", i, output[i].r, output[i].g, output[i].b);
+    return output;
+}
 
 static PyObject *cget_color_samples(PyObject *self, PyObject *args) {
     // arg1 is the numpy array as np.uint8 of dimensions (h, w, 3)
@@ -22,8 +79,8 @@ static PyObject *cget_color_samples(PyObject *self, PyObject *args) {
     int freq = PyLong_AsLong(pyfreq);
     // Py_DECREF(pyfreq);
 
-    int h = PyArray_DIM(img, 0);
-    int w = PyArray_DIM(img, 1);
+    int h = (int) PyArray_DIM(img, 0);
+    int w = (int) PyArray_DIM(img, 1);
 
     int i, j, k;
     int wfreq = (int) ceil((double) w / (double) freq);

@@ -64,23 +64,25 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE):
     for frame in read_video(path, fps, freq=freq, size=size):
         if frame is None:
             break
-        colors = cget_color_samples(frame, freq)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        s = img2ascii(frame, ascii_map)
+        # colors = cget_color_samples(frame, freq)
+        colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        s = img2ascii(colorless_frame, ascii_map)
         # s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n'
-        s = cmap_color(s, colors, frame.shape[1]+1, freq, 1)
+        s = cmap_color(s, frame, frame.shape[1]+1, freq, 1)
         # print(f'S: {len(s)}, freq: {freq}')
         if len(s) > 15500:
             freq += 1
+            freq = min(frame.shape[1], freq)
         elif len(s) < 13000:
             freq -= 1
-        freq = max(1, freq)
-        thread = Thread(target=sys.stdout.write, args=(s,))
+            freq = max(1, freq)
+        # thread = Thread(target=sys.stdout.write, args=(s,))
         while ((end := perf_counter()) - start) < ifps:
             pass
         start = end
         # st = perf_counter()
-        thread.start()
+        sys.stdout.write(s)
+        # thread.start()
         # print(perf_counter() - st)
         # break
 

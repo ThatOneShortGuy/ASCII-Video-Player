@@ -7,7 +7,7 @@ from cimg2ascii import cmap_color, cmap_color_old, cget_color_samples
 os.system("")
 
 SIZE = 266,61
-COLOR_SAMPLE_FREQ = 5
+COLOR_SAMPLE_FREQ = 2
 
 def load_ascii_map(filename):
     with open(filename, 'rb') as f:
@@ -37,14 +37,14 @@ def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ):
     w, h, _ = img.shape
     output = [None]*((ceil(h/freq))*w)
     get_color_samples(img, output, freq)
-    coutput = cget_color_samples(img, freq)
+    # coutput = cget_color_samples(img, freq)
     
     # print(output)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    s = img2ascii(img, ascii_map)
+    no_color_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    s = img2ascii(no_color_img, ascii_map)
     # s = '\n'.join('█' * h for _ in range(w)) + '\n'
-    # old = map_color(s, output, h+1, freq)
-    new = cmap_color(s, coutput, h+1, freq, 0)
+    old = map_color(s, output, h+1, freq)
+    new = cmap_color(s, img, h+1, freq, 0)
     return new
 
 def map_color_old(s, colors, h, freq=COLOR_SAMPLE_FREQ):

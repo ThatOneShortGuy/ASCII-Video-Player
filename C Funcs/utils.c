@@ -1,16 +1,21 @@
+#ifndef INCLUDES
+#define INCLUDES
+
 #include <Python.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <numpy/arrayobject.h>
+#endif
+
 #include "moreUtils.c"
 
 #define COLOR_SIZE 20
-
-// static PyObject *cget_color_samples(PyObject *self, PyObject *args);
+#define THREADS
 
 static PyObject *cmap_color(PyObject *self, PyObject *args) {
     int THRESHOLD = 16;
-    PyObject *pystring, *pycolors, *pyline_len, *pyfreq, *pyOptimizations;
-    if (!PyArg_ParseTuple(args, "OOOOO", &pystring, &pycolors, &pyline_len, &pyfreq, &pyOptimizations)) {
+    PyObject *pystring, *img, *pyline_len, *pyfreq, *pyOptimizations;
+    if (!PyArg_ParseTuple(args, "OOOOO", &pystring, &img, &pyline_len, &pyfreq, &pyOptimizations)) {
         printf("Error parsing args\n");
         return NULL;
     }
@@ -20,15 +25,11 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     // return PyUnicode_FromWideChar(string, string_len);
     // wprintf(L"string:\n%ls\n", string);
     // printf("len of string in bytes: %zd\n", wcslen(string)*sizeof(wchar_t));
-    unsigned char *colors = malloc(sizeof(char) * 3 * PyList_Size(pycolors));
-    for (int i = 0; i < PyList_Size(pycolors); i++) {
-        PyObject *pycolor = PyList_GetItem(pycolors, i);
-        colors[i * 3] = (char) PyLong_AsLong(PyList_GetItem(pycolor, 0));
-        colors[i * 3 + 1] = (char) PyLong_AsLong(PyList_GetItem(pycolor, 1));
-        colors[i * 3 + 2] = (char) PyLong_AsLong(PyList_GetItem(pycolor, 2));
-    }
     int freq = PyLong_AsLong(pyfreq);
-    // printf("num of colors: %lld\n", PyList_Size(pycolors));
+    img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
+    pixel *img_colors = get_color_samples(img, freq);
+    // for (int i = 0; i < 6;i++) printf("img_colors[%d]: %d, %d, %d\n", i, img_colors[i].r, img_colors[i].g, img_colors[i].b);
+
     size_t n1 = string_len / line_len;
     size_t n2 = line_len;
     int optimizations = PyLong_AsLong(pyOptimizations);
@@ -41,12 +42,12 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     // memset(new_string, 0, size+1);
     // printf("Allocated new string successfully, size: %zd\n", size/sizeof(wchar_t));
     int j = 0;
-    unsigned char r, g, b;
-    unsigned char prev_r = 0, prev_g = 0, prev_b = 0;
+    pixel current_color;
+    pixel prev_color = { 0 };
     int current_pos = 0;
     // printf("string_len: %zd, line_len: %zd, freq: %d\n", string_len, line_len, freq);
     // printf("[");
-    int copied = 0;
+    int copied;
     for (int i = 0; i < string_len; i++) {
         if ((i % line_len) % freq || string[i] == L'\n' || (current_pos > 15800 && optimizations)) {
             new_string[current_pos] = string[i];
@@ -60,17 +61,19 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
         } else if (current_pos > 15300 && optimizations) {
             THRESHOLD = 100;
         }
-        b = colors[j];
-        g = colors[j + 1];
-        r = colors[j + 2];
-        if (abs(r - prev_r) < THRESHOLD && abs(g - prev_g) < THRESHOLD && abs(b - prev_b) < THRESHOLD) {
+        current_color.b = img_colors[j].r;
+        current_color.g = img_colors[j].g;
+        current_color.r = img_colors[j].b;
+        if (abs(current_color.r - prev_color.r) < THRESHOLD &&
+            abs(current_color.g - prev_color.g) < THRESHOLD &&
+            abs(current_color.b - prev_color.b) < THRESHOLD) {
             new_string[current_pos] = string[i];
             current_pos++;
-            j+=3;
+            j++;
             continue;
         }
         // printf("r: %d, g: %d, b: %d\n", r, g, b);
-        copied = swprintf(new_string + current_pos, COLOR_SIZE*2, L"\033[38;2;%d;%d;%dm%c", r, g, b, string[i]);
+        copied = swprintf(new_string + current_pos, COLOR_SIZE*2, L"\033[38;2;%d;%d;%dm%c", current_color.r, current_color.g, current_color.b, string[i]);
         // printf("[");
         // for (int k = 0; k < 620; k++) printf("%d, ", new_string[k]);
         // printf("] %c(%d)\n", string[i], string[i]);
@@ -79,11 +82,9 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
             return NULL;
         }
         current_pos += copied;
-        prev_r = r;
-        prev_g = g;
-        prev_b = b;
+        prev_color = current_color;
         // printf("current_pos: %d\n", current_pos);
-        j+=3;
+        j++;
     }
     // printf("]\n");
     // printf("[");
@@ -94,9 +95,13 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     // printf("\033[0mSupposed size: %d\n", current_pos);
     // printf("Actual size: %zd\n", wcslen(new_string));
     PyObject *ret = PyUnicode_FromWideChar(new_string, current_pos);
-    free(colors);
-    // free(string);
+    free(img_colors);
+    // printf("check\n");
+    free(string);
     free(new_string);
+    Py_DECREF(img);
+    // Py_DECREF(string_len);
+    // Py_DECREF(ret);
     return ret;
 }
 
@@ -126,7 +131,7 @@ static PyObject *cmap_color_old(PyObject *self, PyObject *args) {
     int h = PyLong_AsLong(pyh);
     int freq = PyLong_AsLong(pyfreq);
     // printf("num of colors: %lld\n", PyList_Size(pycolors));
-    int size = sizeof(wchar_t) * (COLOR_SIZE * PyList_Size(pycolors) + string_len + PyList_Size(pycolors));
+    int size = (int) sizeof(wchar_t) * (COLOR_SIZE * PyList_Size(pycolors) + string_len + PyList_Size(pycolors));
     wchar_t *new_string = malloc(size);
     memset(new_string, 0, size);
     // printf("Allocated new string successfully, size: %d\n", size);
