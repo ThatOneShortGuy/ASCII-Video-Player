@@ -1,12 +1,13 @@
 import cv2
 import sys
 import os
-from cimg2ascii import cmap_color, cmap_color_old
+from math import ceil
+from cimg2ascii import cmap_color, cmap_color_old, cget_color_samples
 
 os.system("")
 
 SIZE = 266,61
-COLOR_SAMPLE_FREQ = 2
+COLOR_SAMPLE_FREQ = 5
 
 def load_ascii_map(filename):
     with open(filename, 'rb') as f:
@@ -18,12 +19,33 @@ def img2ascii(img, ascii_map):
     w, h = img.shape
     return ''.join(''.join(map(lambda x: ascii_map[x], img[i])) + '\n' for i in range(w))
 
-def get_color_samples(img, freq=COLOR_SAMPLE_FREQ, offset=0):
+def get_color_samples(img, output, freq=COLOR_SAMPLE_FREQ):
+    h, w, _ = img.shape
+    color_locs = tuple(tuple(i+j for j in range(freq) if i+j < w) for i in range(0, w, freq))
+    for i in range(h):
+        for j in range(ceil(w/freq)):
+            col = img[i, color_locs[j]].mean(axis=0).astype('uint8').tolist()
+            try:
+                output[i * ceil(w/freq) + j] = col
+            except Exception as e:
+                print(f'{i = } {j = } {w = } { freq = }')
+                raise e
+    # color_locs = tuple(i for i in range(0, w, freq))
+    # return img[:, color_locs].reshape((h*len(color_locs),3)).tolist()
+
+def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ):
     w, h, _ = img.shape
-    color_locs = tuple(i for i in range(offset % freq, h, freq))
-    return img[:, color_locs].reshape((w*len(color_locs),3)).tolist()
-        
-    # return [tuple(img[divmod(i, h)]) for i in range(freq, w * h, freq)]
+    output = [None]*((ceil(h/freq))*w)
+    get_color_samples(img, output, freq)
+    coutput = cget_color_samples(img, freq)
+    
+    # print(output)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    s = img2ascii(img, ascii_map)
+    # s = '\n'.join('█' * h for _ in range(w)) + '\n'
+    # old = map_color(s, output, h+1, freq)
+    new = cmap_color(s, coutput, h+1, freq, 0)
+    return new
 
 def map_color_old(s, colors, h, freq=COLOR_SAMPLE_FREQ):
     ns = ''
@@ -50,15 +72,6 @@ def map_color(s, colors, line_len, freq=COLOR_SAMPLE_FREQ):
         j += 1
     return ns
 
-def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ):
-    colors = get_color_samples(img, freq)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    w, h = img.shape
-    s = img2ascii(img, ascii_map)
-    # s = '\n'.join('█' * h for _ in range(w)) + '\n'
-    old = map_color(s, colors, h+1, freq)
-    new = cmap_color(s, colors, h+1, freq, 0)
-    return new
 
 def calc_ratio(w, h, img):
     iw, ih = img.shape[:2]

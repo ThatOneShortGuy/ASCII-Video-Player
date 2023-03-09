@@ -1,8 +1,8 @@
 from img2ascii import img2ascii, load_ascii_map, get_color_samples, map_color
-from random import randint
-from cimg2ascii import cmap_color
+from cimg2ascii import cmap_color, cget_color_samples
 import sys
 import os
+from math import ceil
 import cv2
 from time import perf_counter
 from threading import Thread
@@ -55,7 +55,6 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE):
             p.release()
     finally:
         pass
-        # shutil.rmtree('temp')
 
 
 def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE):
@@ -65,7 +64,7 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE):
     for frame in read_video(path, fps, freq=freq, size=size):
         if frame is None:
             break
-        colors = get_color_samples(frame, freq)
+        colors = cget_color_samples(frame, freq)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = img2ascii(frame, ascii_map)
         # s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n'
@@ -94,15 +93,15 @@ if __name__ == "__main__":
         -fps <fps>, -r <fps> : Framerate of the output video (default: 30)
         -s <width>,<height> : Size of the output video (default: 188,40)
         -h : Show this help message'''
-    video_path = 'crf18.pm4'
+    video_path = 'crf18.mp4'
     clean = False
     freq = COLOR_SAMPLE_FREQ
     w, h = SIZE
     fps = 30
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 and not os.path.isfile(video_path):
         print(usage)
         sys.exit(0)
-    video_path = sys.argv.pop(1)
+    video_path = sys.argv.pop(1) if len(sys.argv) > 1 else video_path
     if not os.path.isfile(video_path):
         print(f'File "{video_path}" not found')
         sys.exit(1)

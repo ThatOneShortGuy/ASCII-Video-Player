@@ -1,8 +1,11 @@
 #include <Python.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "moreUtils.c"
 
 #define COLOR_SIZE 20
+
+// static PyObject *cget_color_samples(PyObject *self, PyObject *args);
 
 static PyObject *cmap_color(PyObject *self, PyObject *args) {
     int THRESHOLD = 16;
@@ -29,9 +32,9 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     size_t n1 = string_len / line_len;
     size_t n2 = line_len;
     int optimizations = PyLong_AsLong(pyOptimizations);
-    // printf("n1: %d, n2: %d\n", n1, n2);
-    // printf("n1 * n2 = %d\n", n1 * n2);
-    // printf("n1 * ceil(n2 / freq) = %d\n", n1 * (n2 / freq + 1 ));
+    // printf("n1: %zd, n2: %zd\n", n1, n2);
+    // printf("n1 * n2 = %zd\n", n1 * n2);
+    // printf("n1 * ceil(n2 / freq) = %zd\n", n1 * (n2 / freq + 1 ));
     // printf("COLOR_SIZE*(n2/freq)*n1 = %zd\n", COLOR_SIZE*(n2/freq+1)*n1);
     size_t size = sizeof(wchar_t) * (n2 + (COLOR_SIZE)*(n2/freq+1)) * n1;
     wchar_t *new_string = malloc(size+1);
@@ -45,14 +48,14 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     // printf("[");
     int copied = 0;
     for (int i = 0; i < string_len; i++) {
-        if ((i % line_len) % freq || string[i] == L'\n' || (current_pos > 16000 && optimizations)) {
+        if ((i % line_len) % freq || string[i] == L'\n' || (current_pos > 15800 && optimizations)) {
             new_string[current_pos] = string[i];
             current_pos++;
             // printf("i: %d\n%c [%d]\n", i, string[i], string[i]);
             // printf("%d, ", string[i]);
             continue;
         }
-        if (current_pos > 14500 && optimizations) {
+        if (current_pos > 14400 && optimizations) {
             THRESHOLD = 50;
         } else if (current_pos > 15300 && optimizations) {
             THRESHOLD = 100;
@@ -87,12 +90,12 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     // for (int i = 0; i < current_pos; i++) {
     //     printf("%d, ", new_string[i]);
     // }
-    // printf("]");
+    // printf("]\n");
     // printf("\033[0mSupposed size: %d\n", current_pos);
     // printf("Actual size: %zd\n", wcslen(new_string));
     PyObject *ret = PyUnicode_FromWideChar(new_string, current_pos);
     free(colors);
-    free(string);
+    // free(string);
     free(new_string);
     return ret;
 }
@@ -176,6 +179,7 @@ static PyObject *cmap_color_old(PyObject *self, PyObject *args) {
 }
 
 static PyMethodDef UtilsMethods[] = {
+    {"cget_color_samples", (PyCFunction)cget_color_samples, METH_VARARGS, "Get color samples from image"},
     {"cmap_color", (PyCFunction)cmap_color, METH_VARARGS, "Map color to string"},
     {"cmap_color_old", (PyCFunction)cmap_color_old, METH_VARARGS, "Map color to string (Old version)"},
     {NULL, NULL, 0, NULL}
@@ -190,5 +194,6 @@ static struct PyModuleDef utilsmodule = {
 };
 
 PyMODINIT_FUNC PyInit_cimg2ascii(void) {
+    import_array();
     return PyModule_Create(&utilsmodule);
 }
