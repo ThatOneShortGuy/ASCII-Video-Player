@@ -76,7 +76,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         
             while not os.path.exists(f'temp/{img:08d}.png'):
                 pass
-            if play: p.play()
+            if play_audio: p.play()
             if start_time is not None:
                 start_time[0] = time.time()
             while True:
@@ -87,7 +87,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         except Exception:
             pass
         finally:
-            if play: p.release()
+            if play_audio: p.release()
     finally:
         pass
 
