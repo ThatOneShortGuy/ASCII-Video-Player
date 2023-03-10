@@ -66,10 +66,17 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
 
         try:
             img = 1
-            p = vlc.MediaPlayer('temp/audio.mkv')
+            play_audio=False
+            try:
+                p = vlc.MediaPlayer('temp/audio.mkv')
+            except AttributeError:
+                print("\nCould not locate installation for VLC media player.\nPlaying video without audio")
+                time.sleep(2)
+                play_audio = False
+        
             while not os.path.exists(f'temp/{img:08d}.png'):
                 pass
-            p.play()
+            if play: p.play()
             if start_time is not None:
                 start_time[0] = time.time()
             while True:
@@ -80,7 +87,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         except Exception:
             pass
         finally:
-            p.release()
+            if play: p.release()
     finally:
         pass
 
