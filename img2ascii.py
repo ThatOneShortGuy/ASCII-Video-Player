@@ -94,12 +94,12 @@ if __name__ == "__main__":
         if val in ('-f', '-c'):
             freq = int(sys.argv.pop(1))
         elif val in ('-s'):
-            w, h = map(int, sys.argv.pop(1).split(','))
+            w, h = map(int, sys.argv.pop(1).split(':'))
         else:
             print('''\nUsage: img2ascii.py <input_file> [options]\n
     Options:
         -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 (default: 2),
-        -s <width>,<height> : Size of the output image (default: 266,61),
+        -s <width>:<height> : Size of the output image (default: 266:61),
         -h : Show this help message''')
             sys.exit(0)
 

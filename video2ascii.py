@@ -8,11 +8,18 @@ from time import perf_counter
 from threading import Thread
 import shutil
 import vlc
+import time
 
 os.add_dll_directory(os.getcwd())
 
 SIZE = 188, 40
 COLOR_SAMPLE_FREQ = 16
+
+def get_vid_fps(path):
+    cap = cv2.VideoCapture(path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    return fps
 
 def get_vid_dim(path):
     cap = cv2.VideoCapture(path)
@@ -21,7 +28,7 @@ def get_vid_dim(path):
     cap.release()
     return w, h
 
-def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE):
+def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_time=None, ffmpeg=''):
     """
     Reads a video file and returns a list of frames using ffmpeg
     """
@@ -35,15 +42,17 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE):
     try:
         if not os.path.exists('temp'):
             os.mkdir('temp')
-            os.system(f'ffmpeg -y -i "{video_path}" -vn temp/out.flac')
-            os.system(f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]} temp/%08d.png')
+            os.system(f'ffmpeg -y -i "{video_path}" -vn -c:a copy temp/audio.mkv')
+            os.system(f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]} {ffmpeg} temp/%08d.png')
 
         try:
             img = 1
-            p = vlc.MediaPlayer('temp/out.flac')
+            p = vlc.MediaPlayer('temp/audio.mkv')
             while not os.path.exists(f'temp/{img:08d}.png'):
                 pass
             p.play()
+            if start_time is not None:
+                start_time[0] = time.time()
             while True:
                 read_img = cv2.imread(f'temp/{img:08d}.png')
                 yield read_img
@@ -57,49 +66,52 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE):
         pass
 
 
-def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE):
-    ifps = 1 / fps
+def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=False, no_ascii=False, colorless=False):
+    fps = get_vid_fps(video_path) if fps is None else fps
     ascii_map = load_ascii_map('ascii_darkmap.dat')
-    start = perf_counter()
-    for frame in read_video(path, fps, freq=freq, size=size):
+    start = [time.time()]
+    for i, frame in enumerate(read_video(path, fps, freq=freq, size=size, start_time=start, ffmpeg=ffmpeg)):
         if frame is None:
             break
         # colors = cget_color_samples(frame, freq)
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        s = img2ascii(colorless_frame, ascii_map)
-        # s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n'
-        s = cmap_color(s, frame, frame.shape[1]+1, freq, 1)
+        s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n' if no_ascii else img2ascii(colorless_frame, ascii_map)
+        s = cmap_color(s, frame, frame.shape[1]+1, freq, 1) if not colorless else s
         # print(f'S: {len(s)}, freq: {freq}')
         if len(s) > 15500:
             freq += 1
             freq = min(frame.shape[1], freq)
-        elif len(s) < 13000:
+        elif len(s) < 14500:
             freq -= 1
             freq = max(1, freq)
-        # thread = Thread(target=sys.stdout.write, args=(s,))
-        while ((end := perf_counter()) - start) < ifps:
+        while i > fps * (time.time() - start[0]):
             pass
-        start = end
-        # st = perf_counter()
-        sys.stdout.write(s)
-        # thread.start()
-        # print(perf_counter() - st)
-        # break
+        sys.stdout.write(f'\033[0m\nfreq: {freq}, frame: {i}, fps: {fps:.4g}, strlen: {len(s)}\n'+s if debug else s)
 
 
 if __name__ == "__main__":
     usage = '''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
-        --clean : Clean the temporary files before and after the program is done running (default: False)
-        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 (default: 16)
-        -fps <fps>, -r <fps> : Framerate of the output video (default: 30)
-        -s <width>,<height> : Size of the output video (default: 188,40)
-        -h : Show this help message'''
+        -h : Show this help message
+
+        --clean : Clean the temporary files before running (default: False)
+        --colorless : Don't use color in the output (default: False)
+        -d, --debug : Show debug information (default: False)
+        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: 16)
+        --no-ascii : Don't use ascii characters to represent the video (default: False)
+        -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
+        -s <width>:<height> : Size of the output video (default: 188:40)
+        
+        --ffmpeg [...] : All commands after this will be passed to ffmpeg video'''
     video_path = 'crf18.mp4'
     clean = False
+    colorless = False
+    debug = False
     freq = COLOR_SAMPLE_FREQ
+    no_ascii = False
     w, h = SIZE
-    fps = 30
+    fps = None
+    ffmpeg = ''
     if len(sys.argv) < 2 and not os.path.isfile(video_path):
         print(usage)
         sys.exit(0)
@@ -109,22 +121,31 @@ if __name__ == "__main__":
         sys.exit(1)
     while len(sys.argv) > 1:
         val = sys.argv.pop(1)
-        if val in ('-f', '-c'):
-            freq = int(sys.argv.pop(1))
-        elif val in ('-s'):
-            w, h = map(int, sys.argv.pop(1).split(','))
-        elif val in ('-fps', '-r'):
-            fps = int(sys.argv.pop(1))
-        elif val in ('--clean'):
+        if val in ('--clean'):
             if os.path.exists('temp'):
                 shutil.rmtree('temp')
+        elif val in ('--colorless'):
+            colorless = True
+        elif val in ('-d', '--debug'):
+            debug = True
+        elif val in ('-f', '-c'):
+            freq = int(sys.argv.pop(1))
+        elif val in ('--no-ascii'):
+            no_ascii = True
+        elif val in ('-r', '--fps'):
+            fps = int(sys.argv.pop(1))
+        elif val in ('-s'):
+            w, h = map(int, sys.argv.pop(1).split(':'))
             clean = True
+        elif val in ('--ffmpeg'):
+            ffmpeg = ' '.join(sys.argv[1:])
+            break
         else:
             print(usage)
             sys.exit(0)
 
     try:
-        show_video(video_path, fps, freq=freq, size=(w, h))
+        show_video(video_path, fps=fps, freq=freq, size=(w, h), ffmpeg=ffmpeg, debug=debug, no_ascii=no_ascii, colorless=colorless)
     finally:
         # if clean:
         #     shutil.rmtree('temp')
