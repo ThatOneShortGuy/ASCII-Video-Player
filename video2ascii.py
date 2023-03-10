@@ -28,7 +28,22 @@ def get_vid_dim(path):
     cap.release()
     return w, h
 
-def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_time=None, ffmpeg=''):
+def process_ffmpeg_args(args):
+    vfilters = ''
+    afilters = ''
+    extras = []
+    while len(args) > 0:
+        val = args.pop(0)
+        if val in ('-vf', '-filter:v'):
+            vfilters = args.pop(0)
+        elif val in ('-af', '-filter:a'):
+            afilters = args.pop(0)
+        else:
+            extras.append(val)
+    return vfilters, afilters, ' '.join(extras)
+
+
+def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_time=None, ffmpeg=[]):
     """
     Reads a video file and returns a list of frames using ffmpeg
     """
@@ -39,11 +54,15 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         w, h = get_vid_dim(video_path)
         size = size[0], int(h * size[0] / w / 2)
 
+    vfilters, afilters, ffmpeg = process_ffmpeg_args(ffmpeg)
+
     try:
         if not os.path.exists('temp'):
             os.mkdir('temp')
-            os.system(f'ffmpeg -y -i "{video_path}" -vn -c:a copy temp/audio.mkv')
-            os.system(f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]} {ffmpeg} temp/%08d.png')
+            audio_command = f'ffmpeg -y -i "{video_path}" -vn {ffmpeg} {f"-af {afilters}" if afilters else "-c:a copy"} temp/audio.mkv'
+            print('Audio command: ', audio_command)
+            os.system(audio_command)
+            os.system(f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} temp/%08d.png')
 
         try:
             img = 1
@@ -138,7 +157,7 @@ if __name__ == "__main__":
             w, h = map(int, sys.argv.pop(1).split(':'))
             clean = True
         elif val in ('--ffmpeg'):
-            ffmpeg = ' '.join(sys.argv[1:])
+            ffmpeg = sys.argv[1:]
             break
         else:
             print(usage)
