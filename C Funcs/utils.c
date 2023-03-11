@@ -43,7 +43,7 @@ static PyObject *cmap_color(PyObject *self, PyObject *args) {
     // printf("Allocated new string successfully, size: %zd\n", size/sizeof(wchar_t));
     int j = 0;
     pixel current_color;
-    pixel prev_color = { 0 };
+    pixel prev_color = { 255 };
     int current_pos = 0;
     // printf("string_len: %zd, line_len: %zd, freq: %d\n", string_len, line_len, freq);
     // printf("[");

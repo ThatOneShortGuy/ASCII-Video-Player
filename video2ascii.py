@@ -66,7 +66,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
 
         try:
             img = 1
-            play_audio=False
+            play_audio=True
             try:
                 p = vlc.MediaPlayer('temp/audio.mkv')
             except AttributeError:
