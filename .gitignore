@@ -16,5 +16,4 @@ ffmpeg.exe
 .vscode
 *.exe
 build/*
-*.pyd
 numpy/*
