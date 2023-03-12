@@ -70,7 +70,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
             try:
                 p = vlc.MediaPlayer('temp/audio.mkv')
             except AttributeError:
-                print("\nCould not locate installation for VLC media player.\nPlaying video without audio")
+                print("\n\033[31mCould not locate installation for VLC media player.\nPlaying video without audio\033[0m")
                 time.sleep(2)
                 play_audio = False
         
