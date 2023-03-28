@@ -1,7 +1,9 @@
 from distutils.core import setup, Extension
 import numpy as np
 
-module = Extension('cimg2ascii', sources = ['C Funcs/utils.c'])
+module = Extension('cimg2ascii',
+                   sources = ['C Funcs/utils.c'],
+                   extra_compile_args=['/O2'])
 
 setup(name = 'cimg2ascii',
       version = '1.0',
