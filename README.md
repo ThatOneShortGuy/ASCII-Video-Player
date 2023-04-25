@@ -1,5 +1,7 @@
 # Convert Images or Video to Colored ASCII Art
 
+![Sample Image](Images/image.png)
+
 # Table of Contents
 - [Introduction](#introduction)
 - [Dependencies](#dependencies)
