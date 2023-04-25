@@ -33,7 +33,7 @@ def get_color_samples(img, output, freq=COLOR_SAMPLE_FREQ):
     # color_locs = tuple(i for i in range(0, w, freq))
     # return img[:, color_locs].reshape((h*len(color_locs),3)).tolist()
 
-def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ):
+def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ, color=True):
     w, h, _ = img.shape
     output = [None]*((ceil(h/freq))*w)
     get_color_samples(img, output, freq)
@@ -43,9 +43,9 @@ def get_colored_ascii(img, ascii_map, freq=COLOR_SAMPLE_FREQ):
     no_color_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     s = img2ascii(no_color_img, ascii_map)
     # s = '\n'.join('█' * h for _ in range(w)) + '\n'
-    old = map_color(s, output, h+1, freq)
+    # old = map_color(s, output, h+1, freq)
     new = cmap_color(s, img, h+1, freq, 0)
-    return new
+    return new if color else no_color_img
 
 def map_color_old(s, colors, h, freq=COLOR_SAMPLE_FREQ):
     ns = ''
