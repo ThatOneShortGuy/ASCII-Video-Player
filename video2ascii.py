@@ -2,15 +2,10 @@ from img2ascii import img2ascii, load_ascii_map, get_color_samples, map_color
 from cimg2ascii import cmap_color, cget_color_samples
 import sys
 import os
-from math import ceil
 import cv2
-from time import perf_counter
-from threading import Thread
 import shutil
-import vlc
 import time
-
-os.add_dll_directory(os.getcwd())
+import subprocess
 
 SIZE = 160, -1
 COLOR_SAMPLE_FREQ = 16
@@ -57,40 +52,31 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
     vfilters, afilters, ffmpeg = process_ffmpeg_args(ffmpeg)
     picture_ext = 'jpg'
 
-    try:
-        if not os.path.exists('temp'):
-            os.mkdir('temp')
-            audio_command = f'ffmpeg -y -i "{video_path}" -vn {ffmpeg} {f"-af {afilters}" if afilters else "-c:a copy"} temp/audio.mkv'
-            print('Audio command: ', audio_command)
-            os.system(audio_command)
-            os.system(f'ffmpeg -y -i "{video_path}" -q:v 2 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} temp/%08d.{picture_ext}')
+    if not os.path.exists('temp'):
+        os.mkdir('temp')
+        os.system(f'ffmpeg -y -i "{video_path}" -q:v 2 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} temp/%08d.{picture_ext}')
 
-        try:
-            img = 1
-            play_audio=True
-            try:
-                p = vlc.MediaPlayer('temp/audio.mkv')
-            except AttributeError:
-                print("\n\033[31mCould not locate installation for VLC media player.\nPlaying video without audio\033[0m")
-                time.sleep(2)
-                play_audio = False
-        
-            while not os.path.exists(f'temp/{img:08d}.{picture_ext}'):
-                pass
-            if play_audio: p.play()
-            if start_time is not None:
-                start_time[0] = time.time()
-            while os.path.exists(f'temp/{img:08d}.{picture_ext}'):
-                read_img = cv2.imread(f'temp/{img:08d}.{picture_ext}')
-                yield read_img
-                # os.remove(f'temp/{img:08d}.jpg')
-                img += 1
-        except Exception:
+    img = 1
+    play_audio=True
+    try:
+        p = subprocess.Popen(f'ffplay -nodisp -autoexit -loglevel error -i "{video_path}" -vn {ffmpeg} {f"-af {afilters}" if afilters else ""}')
+    except FileNotFoundError:
+        print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
+        time.sleep(2)
+        play_audio = False
+    try:
+        while not os.path.exists(f'temp/{img:08d}.{picture_ext}'):
             pass
-        finally:
-            if play_audio: p.release()
+        if start_time is not None:
+            start_time[0] = time.time()
+        while os.path.exists(f'temp/{img:08d}.{picture_ext}'):
+            read_img = cv2.imread(f'temp/{img:08d}.{picture_ext}')
+            yield read_img
+            # os.remove(f'temp/{img:08d}.jpg')
+            img += 1
     finally:
-        pass
+        if play_audio:
+            p.kill()
 
 
 def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=False, no_ascii=False, colorless=False):
@@ -174,6 +160,8 @@ if __name__ == "__main__":
 
     try:
         show_video(video_path, fps=fps, freq=freq, size=(w, h), ffmpeg=ffmpeg, debug=debug, no_ascii=no_ascii, colorless=colorless)
+    except KeyboardInterrupt:
+        pass
     finally:
         # if clean:
         #     shutil.rmtree('temp')

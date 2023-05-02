@@ -18,12 +18,12 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 # Dependencies and Requirements
 - Python 3.8 or higher (tested on 3.9.6)
 - cv2
-- python-vlc (for the video to ASCII art converter) (you may need to have the libvlc.dll and libvlccore.dll in your PATH environment variable (usually in C:\Program Files\VideoLAN\VLC) You will also need to have the VLC media player installed)
-- ffmpeg (for the video to ASCII art converter) (you may need to have the ffmpeg.exe in your PATH environment variable compiled to be able to decode the video and output them as rgb24 png images)
+- ffmpeg [for the video to ASCII art converter] (you will need to have the ffmpeg.exe in your PATH environment)
+- ffplay [for the video to ASCII art converter] (you will need to have the ffplay.exe in your PATH environment for audio playback)
 
 To install the dependencies, run the following command:
 ```bash
-pip install -U opencv-python python-vlc numpy
+pip install -U opencv-python
 ```
 
 # How to compile and run
