@@ -59,5 +59,5 @@ python vid2ascii.py <video path> [options]
 - `-f <freq>`, `-c <freq>`: Color frequency. The higher the integer, the more space between the sampled colors. (default: 16)
 - `--no-ascii`: Don't use ascii characters to represent the video (default: False)
 - `-r <fps>, --fps <fps>`: Frames per second. The framerate to play the video back at (default: video's framerate)
-- `-s <width>:<height>`: Size of the output video. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 188:40)
+- `-s <width>:<height>`: Size of the output video. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 160:-1)
 - `--ffmpeg [...]`: All commands after this will be passed to ffmpeg video decoder. See [ffmpeg documentation](https://ffmpeg.org/ffmpeg.html) for more information (default: None)

@@ -12,7 +12,7 @@ import time
 
 os.add_dll_directory(os.getcwd())
 
-SIZE = 188, 40
+SIZE = 160, -1
 COLOR_SAMPLE_FREQ = 16
 
 def get_vid_fps(path):
@@ -55,6 +55,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         size = size[0], int(h * size[0] / w / 2)
 
     vfilters, afilters, ffmpeg = process_ffmpeg_args(ffmpeg)
+    picture_ext = 'jpg'
 
     try:
         if not os.path.exists('temp'):
@@ -62,7 +63,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
             audio_command = f'ffmpeg -y -i "{video_path}" -vn {ffmpeg} {f"-af {afilters}" if afilters else "-c:a copy"} temp/audio.mkv'
             print('Audio command: ', audio_command)
             os.system(audio_command)
-            os.system(f'ffmpeg -y -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} temp/%08d.png')
+            os.system(f'ffmpeg -y -i "{video_path}" -q:v 2 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} temp/%08d.{picture_ext}')
 
         try:
             img = 1
@@ -74,13 +75,13 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
                 time.sleep(2)
                 play_audio = False
         
-            while not os.path.exists(f'temp/{img:08d}.png'):
+            while not os.path.exists(f'temp/{img:08d}.{picture_ext}'):
                 pass
             if play_audio: p.play()
             if start_time is not None:
                 start_time[0] = time.time()
-            while True:
-                read_img = cv2.imread(f'temp/{img:08d}.png')
+            while os.path.exists(f'temp/{img:08d}.{picture_ext}'):
+                read_img = cv2.imread(f'temp/{img:08d}.{picture_ext}')
                 yield read_img
                 # os.remove(f'temp/{img:08d}.jpg')
                 img += 1
@@ -94,7 +95,8 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
 
 def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=False, no_ascii=False, colorless=False):
     fps = get_vid_fps(video_path) if fps is None else fps
-    ascii_map = load_ascii_map('ascii_darkmap.dat')
+    path_to_self = os.path.dirname(os.path.realpath(__file__))
+    ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
     start = [time.time()]
     for i, frame in enumerate(read_video(path, fps, freq=freq, size=size, start_time=start, ffmpeg=ffmpeg)):
         if frame is None:
@@ -116,19 +118,6 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
 
 
 if __name__ == "__main__":
-    usage = '''\nUsage: vid2ascii.py <input_file> [options]\n
-    Options:
-        -h : Show this help message
-
-        --clean : Clean the temporary files before running (default: False)
-        --colorless : Don't use color in the output (default: False)
-        -d, --debug : Show debug information (default: False)
-        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: 16)
-        --no-ascii : Don't use ascii characters to represent the video (default: False)
-        -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
-        -s <width>:<height> : Size of the output video (default: 188:40)
-        
-        --ffmpeg [...] : All commands after this will be passed to ffmpeg video'''
     video_path = 'crf18.mp4'
     clean = False
     colorless = False
@@ -138,6 +127,19 @@ if __name__ == "__main__":
     w, h = SIZE
     fps = None
     ffmpeg = ''
+    usage = f'''\nUsage: vid2ascii.py <input_file> [options]\n
+    Options:
+        -h : Show this help message
+
+        --clean : Clean the temporary files before running (default: {clean})
+        --colorless : Don't use color in the output (default: {colorless})
+        -d, --debug : Show debug information (default: {debug})
+        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: {COLOR_SAMPLE_FREQ})
+        --no-ascii : Don't use ascii characters to represent the video (default: {no_ascii})
+        -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
+        -s <width>:<height> : Size of the output video (default: {SIZE[0]}:{SIZE[1]})
+        
+        --ffmpeg [...] : All commands after this will be passed to ffmpeg video'''
     if len(sys.argv) < 2 and not os.path.isfile(video_path):
         print(usage)
         sys.exit(0)
