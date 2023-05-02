@@ -6,6 +6,7 @@ import cv2
 import time
 import subprocess
 import numpy as np
+import psutil
 
 SIZE = 160, -1
 COLOR_SAMPLE_FREQ = 16
@@ -52,18 +53,32 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
     vfilters, afilters, ffmpeg = process_ffmpeg_args(ffmpeg)
 
     vidp = subprocess.Popen(
-        f'ffmpeg -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} -f rawvideo -',
-        stdout=subprocess.PIPE, bufsize=3*SIZE[0]*SIZE[1],
+        f'ffmpeg -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},{vfilters+"," if vfilters else ""}scale={size[0]}:{size[1]} {ffmpeg} -f rawvideo -',
+        stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
+    vida = subprocess.Popen(
+        f'ffmpeg -i "{video_path}" -vn -f wav {f"-af {afilters}" if afilters else ""} {ffmpeg} -',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL)
+    
+    print('Loading video...')
 
     play_audio=True
     try:
-        p = subprocess.Popen(f'ffplay -nodisp -autoexit -loglevel error -i "{video_path}" -vn {ffmpeg} {f"-af {afilters}" if afilters else ""}')
+        p = subprocess.Popen(f'ffplay -nodisp -autoexit -loglevel error -i pipe:0 -f wav', stdin=vida.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        p = psutil.Process(p.pid)
+        time.sleep(.3)
+        p.suspend()
     except FileNotFoundError:
         print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
         time.sleep(2)
         play_audio = False
     try:
+        data = vidp.stdout.read(3*size[0]*size[1])
+        p.resume()
+        data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
+        data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+        yield data
         if start_time is not None:
             start_time[0] = time.time()
         while data:=vidp.stdout.read(3*size[0]*size[1]):
@@ -73,6 +88,9 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
             # os.remove(f'temp/{img:08d}.jpg')
     finally:
         vidp.stdout.close()
+        vidp.kill()
+        vida.stdout.close()
+        vida.kill()
         if play_audio:
             p.kill()
 
@@ -98,7 +116,8 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
             freq = max(1, freq)
         while i > fps * (time.time() - start[0]):
             pass
-        sys.stdout.write(f'\033[0m\nfreq: {freq}, frame: {i}, fps: {fps:.4g}, strlen: {len(s)}\n'+s if debug else s)
+        sys.stdout.write(f'\033[0m\nfreq: {freq}, frame: {i}, fps: {i/(time.time()-start[0]):.4g}, strlen: {len(s)}\n'+s
+                         if debug else s)
 
 
 if __name__ == "__main__":

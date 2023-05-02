@@ -18,12 +18,14 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 # Dependencies and Requirements
 - Python 3.8 or higher (tested on 3.9.6)
 - cv2
+- numpy
 - ffmpeg [for the video to ASCII art converter] (you will need to have the ffmpeg.exe in your PATH environment)
 - ffplay [for the video to ASCII art converter] (you will need to have the ffplay.exe in your PATH environment for audio playback)
+- psutil [for the video to ASCII art converter] (you will need to install this using pip)
 
 To install the dependencies, run the following command:
 ```bash
-pip install -U opencv-python
+pip install -U opencv-python psutil
 ```
 
 # How to compile and run
