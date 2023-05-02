@@ -53,7 +53,6 @@ python vid2ascii.py <video path> [options]
 
 ### Options
 - `-h`: Show help message and exit
-- `--clean`: Clean the temporary files before and after the program is done running (default: False)
 - `--colorless`: Don't use color in the output (default: False)
 - `-d`, `--debug`: Show debug information (default: False)
 - `-f <freq>`, `-c <freq>`: Color frequency. The higher the integer, the more space between the sampled colors. (default: 16)

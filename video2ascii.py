@@ -3,9 +3,9 @@ from cimg2ascii import cmap_color, cget_color_samples
 import sys
 import os
 import cv2
-import shutil
 import time
 import subprocess
+import numpy as np
 
 SIZE = 160, -1
 COLOR_SAMPLE_FREQ = 16
@@ -50,13 +50,12 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         size = size[0], int(h * size[0] / w / 2)
 
     vfilters, afilters, ffmpeg = process_ffmpeg_args(ffmpeg)
-    picture_ext = 'jpg'
 
-    if not os.path.exists('temp'):
-        os.mkdir('temp')
-        os.system(f'ffmpeg -y -i "{video_path}" -q:v 2 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} temp/%08d.{picture_ext}')
+    vidp = subprocess.Popen(
+        f'ffmpeg -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},scale={size[0]}:{size[1]}{","+vfilters if vfilters else ""} {ffmpeg} -f rawvideo -',
+        stdout=subprocess.PIPE, bufsize=3*SIZE[0]*SIZE[1],
+        stderr=subprocess.DEVNULL)
 
-    img = 1
     play_audio=True
     try:
         p = subprocess.Popen(f'ffplay -nodisp -autoexit -loglevel error -i "{video_path}" -vn {ffmpeg} {f"-af {afilters}" if afilters else ""}')
@@ -65,16 +64,15 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         time.sleep(2)
         play_audio = False
     try:
-        while not os.path.exists(f'temp/{img:08d}.{picture_ext}'):
-            pass
         if start_time is not None:
             start_time[0] = time.time()
-        while os.path.exists(f'temp/{img:08d}.{picture_ext}'):
-            read_img = cv2.imread(f'temp/{img:08d}.{picture_ext}')
-            yield read_img
+        while data:=vidp.stdout.read(3*size[0]*size[1]):
+            data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
+            data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+            yield data
             # os.remove(f'temp/{img:08d}.jpg')
-            img += 1
     finally:
+        vidp.stdout.close()
         if play_audio:
             p.kill()
 
@@ -105,7 +103,6 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
 
 if __name__ == "__main__":
     video_path = 'crf18.mp4'
-    clean = False
     colorless = False
     debug = False
     freq = COLOR_SAMPLE_FREQ
@@ -117,7 +114,6 @@ if __name__ == "__main__":
     Options:
         -h : Show this help message
 
-        --clean : Clean the temporary files before running (default: {clean})
         --colorless : Don't use color in the output (default: {colorless})
         -d, --debug : Show debug information (default: {debug})
         -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: {COLOR_SAMPLE_FREQ})
@@ -135,10 +131,7 @@ if __name__ == "__main__":
         sys.exit(1)
     while len(sys.argv) > 1:
         val = sys.argv.pop(1)
-        if val in ('--clean'):
-            if os.path.exists('temp'):
-                shutil.rmtree('temp')
-        elif val in ('--colorless'):
+        if val in ('--colorless'):
             colorless = True
         elif val in ('-d', '--debug'):
             debug = True
@@ -150,7 +143,6 @@ if __name__ == "__main__":
             fps = int(sys.argv.pop(1))
         elif val in ('-s'):
             w, h = map(int, sys.argv.pop(1).split(':'))
-            clean = True
         elif val in ('--ffmpeg'):
             ffmpeg = sys.argv[1:]
             break
@@ -163,6 +155,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     finally:
-        # if clean:
-        #     shutil.rmtree('temp')
         print('\033[0m')
