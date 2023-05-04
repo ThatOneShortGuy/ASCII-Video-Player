@@ -1,5 +1,5 @@
-from img2ascii import img2ascii, load_ascii_map, get_color_samples, map_color
-from cimg2ascii import cmap_color, cget_color_samples
+from img2ascii import img2ascii, load_ascii_map, get_color_samples, map_color, insert_color, predict_insert_color_size, get_optimal_threshold
+from cimg2ascii import cmap_color, cget_color_samples, cpredict_insert_color_size, cinsert_color
 import sys
 import os
 import cv2
@@ -8,8 +8,8 @@ import subprocess
 import numpy as np
 import psutil
 
-SIZE = 160, -1
-COLOR_SAMPLE_FREQ = 16
+SIZE = 170, -1
+COLOR_SAMPLE_FREQ = 69
 
 def get_vid_fps(path):
     cap = cv2.VideoCapture(path)
@@ -63,16 +63,14 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
     
     print('Loading video...')
 
-    play_audio=True
     try:
-        p = subprocess.Popen(f'ffplay -nodisp -autoexit -loglevel error -i pipe:0 -f wav', stdin=vida.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -i pipe:0 -f wav', stdin=vida.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         p = psutil.Process(p.pid)
-        time.sleep(.3)
+        time.sleep(.2)
         p.suspend()
     except FileNotFoundError:
         print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
         time.sleep(2)
-        play_audio = False
     try:
         data = vidp.stdout.read(3*size[0]*size[1])
         p.resume()
@@ -91,8 +89,6 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         vidp.kill()
         vida.stdout.close()
         vida.kill()
-        if play_audio:
-            p.kill()
 
 
 def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=False, no_ascii=False, colorless=False):
@@ -100,24 +96,27 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
     path_to_self = os.path.dirname(os.path.realpath(__file__))
     ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
     start = [time.time()]
+    old_size = 0
     for i, frame in enumerate(read_video(path, fps, freq=freq, size=size, start_time=start, ffmpeg=ffmpeg)):
         if frame is None:
             break
         # colors = cget_color_samples(frame, freq)
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n' if no_ascii else img2ascii(colorless_frame, ascii_map)
-        s = cmap_color(s, frame, frame.shape[1]+1, freq, 1) if not colorless else s
-        # print(f'S: {len(s)}, freq: {freq}')
-        if len(s) > 15500:
+        # s = cmap_color(s, frame, frame.shape[1]+1, freq, 1) if not colorless else s
+        while old_size != (old_size:=cpredict_insert_color_size(frame, freq)) and old_size < 16000:
+            freq -= 5
+        while cpredict_insert_color_size(frame, freq) > 16200:
             freq += 1
-            freq = min(frame.shape[1], freq)
-        elif len(s) < 14500:
-            freq -= 1
-            freq = max(1, freq)
+        freq = max(freq, 1)
+        ns = cinsert_color(s, frame, freq) if not colorless else s
+        # print(f'S: {len(s)}, freq: {freq}')
+        # freq += (get_optimal_threshold(freq, len(s), len(ns)) - freq) // 1
+        # freq = min(max(freq, 1), 254)
         while i > fps * (time.time() - start[0]):
             pass
-        sys.stdout.write(f'\033[0m\nfreq: {freq}, frame: {i}, fps: {i/(time.time()-start[0]):.4g}, strlen: {len(s)}\n'+s
-                         if debug else s)
+        sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns
+                         if debug else ns)
 
 
 if __name__ == "__main__":
@@ -129,18 +128,21 @@ if __name__ == "__main__":
     w, h = SIZE
     fps = None
     ffmpeg = ''
+    # Add args if python run in debug mode
+    if sys.gettrace():
+        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d'])
     usage = f'''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
         -h : Show this help message
 
         --colorless : Don't use color in the output (default: {colorless})
         -d, --debug : Show debug information (default: {debug})
-        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: {COLOR_SAMPLE_FREQ})
+        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: {freq})
         --no-ascii : Don't use ascii characters to represent the video (default: {no_ascii})
         -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
         -s <width>:<height> : Size of the output video (default: {SIZE[0]}:{SIZE[1]})
         
-        --ffmpeg [...] : All commands after this will be passed to ffmpeg video'''
+        --ffmpeg [...] : All commands after this will be passed to ffmpeg'''
     if len(sys.argv) < 2 and not os.path.isfile(video_path):
         print(usage)
         sys.exit(0)

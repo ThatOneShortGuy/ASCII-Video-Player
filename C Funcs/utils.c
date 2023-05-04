@@ -183,10 +183,111 @@ static PyObject *cmap_color_old(PyObject *self, PyObject *args) {
     return PyUnicode_FromWideChar(new_string, size/2);
 }
 
+static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
+    PyObject *img, *pythreshold_of_change;
+    if (!PyArg_ParseTuple(args, "OO", &img, &pythreshold_of_change)) {
+        printf("Error parsing args\n");
+        return NULL;
+    }
+    img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
+    size_t threshold_of_change = PyLong_AsLong(pythreshold_of_change);
+
+    int h = (int) PyArray_DIM(img, 0);
+    int w = (int) PyArray_DIM(img, 1);
+
+    pixel prev_color = { 255 };
+    int r, g, b;
+    int length = 0;
+
+    for (int col=0; col < h; ++col) {
+        for (int row=0; row < w; ++row) {
+            b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
+            g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
+            r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
+            // printf("r: %d, g: %d, b: %d\n", r, g, b);
+            if (abs(r - prev_color.r) > threshold_of_change || abs(g - prev_color.g) > threshold_of_change || abs(b - prev_color.b) > threshold_of_change) {
+                length += 7;
+                length += 4*(r>=100) + 3*(r>=10 && r<100) + 2*(r<10); // Extra 1 for the semicolon
+                length += 4*(g>=100) + 3*(g>=10 && g<100) + 2*(g<10);
+                length += 5*(b>=100) + 4*(b>=10 && b<100) + 3*(b<10); // to account for "m_"
+                prev_color.r = r;
+                prev_color.g = g;
+                prev_color.b = b;
+            } else {
+                length++;
+            }
+        }
+        length++;
+    }
+    return PyLong_FromLong(length);
+
+}
+
+static PyObject *cinsert_color(PyObject *self, PyObject *args){
+    PyObject *s, *img, *pythreshold_of_change;
+    if (!PyArg_ParseTuple(args, "OOO", &s, &img, &pythreshold_of_change)) {
+        printf("Error parsing args\n");
+        return NULL;
+    }
+    
+    Py_ssize_t string_len = PyUnicode_GetLength(s);
+    img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
+    size_t threshold_of_change = PyLong_AsLong(pythreshold_of_change);
+    wchar_t *string = PyUnicode_AsWideCharString(s, &string_len);
+
+    int h = (int) PyArray_DIM(img, 0);
+    int w = (int) PyArray_DIM(img, 1);
+
+    pixel prev_color = { 255, 255, 255 };
+    int r, g, b;
+    int length = 0;
+    wchar_t char_string;
+    wchar_t *new_string = malloc(sizeof(wchar_t) * (string_len * 19 + 1));
+    
+    for (int col=0; col < h; ++col) {
+        for (int row=0; row < w; ++row) {
+            b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
+            g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
+            r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
+            char_string = string[col*(w+1) + row];
+            // printf("r: %d, g: %d, b: %d, char_string: %lc\n", r, g, b, char_string);
+            
+            if (abs(r - prev_color.r) > threshold_of_change || abs(g - prev_color.g) > threshold_of_change || abs(b - prev_color.b) > threshold_of_change) {
+                // printf("prev_color: %d, %d, %d\n", prev_color.r, prev_color.g, prev_color.b);
+                int len = swprintf(new_string + length, COLOR_SIZE*2, L"\033[38;2;%d;%d;%dm", r, g, b);
+                // printf("%dx%d len: %d\n", row, col, len);
+                if (len == -1) {
+                    printf("Error copying color string\n");
+                    return NULL;
+                }
+            
+                length += len;
+                prev_color.r = r;
+                prev_color.g = g;
+                prev_color.b = b;
+            }
+            // printf("length: %d, rowxcolumn: %d\n", length, col*(w+1) + row);
+            new_string[length] = char_string;
+            length += 1;
+        }
+        new_string[length] = L'\n';
+        length += 1;
+        // wprintf(L"%ls", new_string);
+    }
+    // printf("Length: %d\n", length);
+    PyObject *ret = PyUnicode_FromWideChar(new_string, length);
+    free(new_string);
+    free(string);
+    Py_DECREF(img);
+    return ret;
+}
+
 static PyMethodDef UtilsMethods[] = {
     {"cget_color_samples", (PyCFunction)cget_color_samples, METH_VARARGS, "Get color samples from image"},
     {"cmap_color", (PyCFunction)cmap_color, METH_VARARGS, "Map color to string"},
     {"cmap_color_old", (PyCFunction)cmap_color_old, METH_VARARGS, "Map color to string (Old version)"},
+    {"cpredict_insert_color_size", (PyCFunction)cpredict_insert_color_size, METH_VARARGS, "Predict the size of the resulting string"},
+    {"cinsert_color", (PyCFunction)cinsert_color, METH_VARARGS, "Insert color to string from image"},
     {NULL, NULL, 0, NULL}
 };
 
