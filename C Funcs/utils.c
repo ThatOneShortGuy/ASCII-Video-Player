@@ -219,6 +219,7 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
         }
         length++;
     }
+    Py_DECREF(img);
     return PyLong_FromLong(length);
 
 }
