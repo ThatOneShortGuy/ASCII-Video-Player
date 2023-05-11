@@ -6,7 +6,6 @@ import cv2
 import time
 import subprocess
 import numpy as np
-import psutil
 
 SIZE = 170, -1
 COLOR_SAMPLE_FREQ = 69
@@ -53,7 +52,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
     vfilters, afilters, ffmpeg = process_ffmpeg_args(ffmpeg)
 
     vidp = subprocess.Popen(
-        f'ffmpeg -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},{vfilters+"," if vfilters else ""}scale={size[0]}:{size[1]} {ffmpeg} -f rawvideo -',
+        f'ffmpeg -i "{video_path}" -pix_fmt bgr24 -vf fps={fps},{vfilters+"," if vfilters else ""}scale={size[0]}:{size[1]} {ffmpeg} -f rawvideo -',
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
@@ -64,26 +63,25 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         stderr=subprocess.DEVNULL)
     
     print('Loading video...')
-
+    data = vidp.stdout.read(3*size[0]*size[1])
+    data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
+    
     try:
-        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        p = psutil.Process(p.pid)
-        time.sleep(.2)
-        p.suspend()
+        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE)
+        audio=True
     except FileNotFoundError:
         print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
         time.sleep(2)
+        audio=False
     try:
-        data = vidp.stdout.read(3*size[0]*size[1])
-        p.resume()
-        data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
-        data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+        # data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+        p.stderr.read(10)
         yield data
         if start_time is not None:
             start_time[0] = time.time()
         while data:=vidp.stdout.read(3*size[0]*size[1]):
             data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
-            data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
+            # data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
             yield data
             # os.remove(f'temp/{img:08d}.jpg')
     finally:
@@ -91,6 +89,8 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         vidp.kill()
         vida.stdout.close()
         vida.kill()
+        if audio:
+            p.kill()
 
 
 def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=False, no_ascii=False, colorless=False):
