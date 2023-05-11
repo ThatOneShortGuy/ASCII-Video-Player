@@ -54,17 +54,19 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
 
     vidp = subprocess.Popen(
         f'ffmpeg -i "{video_path}" -pix_fmt rgb24 -vf fps={fps},{vfilters+"," if vfilters else ""}scale={size[0]}:{size[1]} {ffmpeg} -f rawvideo -',
+        shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
     vida = subprocess.Popen(
         f'ffmpeg -i "{video_path}" -vn -f wav {f"-af {afilters}" if afilters else ""} {ffmpeg} -',
+        shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
     
     print('Loading video...')
 
     try:
-        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -i pipe:0 -f wav', stdin=vida.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         p = psutil.Process(p.pid)
         time.sleep(.2)
         p.suspend()
@@ -113,13 +115,10 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
         # print(f'S: {len(s)}, freq: {freq}')
         # freq += (get_optimal_threshold(freq, len(s), len(ns)) - freq) // 1
         # freq = min(max(freq, 1), 254)
-        # while i > fps * (time.time() - start[0]):
-        #     pass
-        # sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns
-        #                  if debug else ns)
-    sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'
+        while i > fps * (time.time() - start[0]):
+            pass
+        sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns
                          if debug else ns)
-
 
 if __name__ == "__main__":
     video_path = 'crf18.mp4'
