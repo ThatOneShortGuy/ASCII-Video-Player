@@ -113,9 +113,11 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
         # print(f'S: {len(s)}, freq: {freq}')
         # freq += (get_optimal_threshold(freq, len(s), len(ns)) - freq) // 1
         # freq = min(max(freq, 1), 254)
-        while i > fps * (time.time() - start[0]):
-            pass
-        sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns
+        # while i > fps * (time.time() - start[0]):
+        #     pass
+        # sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns
+        #                  if debug else ns)
+    sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'
                          if debug else ns)
 
 
