@@ -221,7 +221,7 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
             // getchar();
             // getchar();
 
-            if (abs(YCbCr_color.cb - prev_YCbCr.cb) + abs(YCbCr_color.cr - prev_YCbCr.cr) > threshold_of_change || abs(prev_YCbCr.y - YCbCr_color.y) > threshold_of_change) {
+            if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
                 length += 7;
                 length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
                 length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
@@ -286,7 +286,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             // getchar();
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
-            if (abs(YCbCr_color.cb - prev_YCbCr.cb) + abs(YCbCr_color.cr - prev_YCbCr.cr) > threshold_of_change || abs(prev_YCbCr.y - YCbCr_color.y) > threshold_of_change) {
+            if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
                 int len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
                 // printf("%dx%d len: %d\n", row, col, len);
                 if (len == -1) {

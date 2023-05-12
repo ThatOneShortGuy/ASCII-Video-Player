@@ -67,7 +67,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
     data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
     
     try:
-        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
         audio=True
     except FileNotFoundError:
         print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
