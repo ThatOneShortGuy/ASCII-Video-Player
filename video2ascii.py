@@ -75,7 +75,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
         audio=False
     try:
         # data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
-        p.stderr.read(10)
+        p.stderr.read(69)
         yield data
         if start_time is not None:
             start_time[0] = time.time()
