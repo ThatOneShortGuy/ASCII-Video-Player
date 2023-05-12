@@ -278,7 +278,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
     // printf("Length: %d\n", length);
     PyObject *ret = PyUnicode_FromWideChar(new_string, length);
     free(new_string);
-    free(string);
+    PyMem_Free(string);
     Py_DECREF(img);
     return ret;
 }
