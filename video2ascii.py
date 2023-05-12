@@ -8,7 +8,7 @@ import subprocess
 import numpy as np
 
 SIZE = 170, -1
-COLOR_SAMPLE_FREQ = 69
+COLOR_SAMPLE_FREQ = 10
 
 def get_vid_fps(path):
     cap = cv2.VideoCapture(path)
@@ -67,7 +67,7 @@ def read_video(video_path, fps=None, freq=COLOR_SAMPLE_FREQ, size=SIZE, start_ti
     data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
     
     try:
-        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE)
+        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         audio=True
     except FileNotFoundError:
         print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
@@ -98,7 +98,6 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
     path_to_self = os.path.dirname(os.path.realpath(__file__))
     ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
     start = [time.time()]
-    old_size = 0
     for i, frame in enumerate(read_video(path, fps, freq=freq, size=size, start_time=start, ffmpeg=ffmpeg)):
         if frame is None:
             break
@@ -106,15 +105,13 @@ def show_video(path, fps, freq=COLOR_SAMPLE_FREQ, size=SIZE, ffmpeg='', debug=Fa
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n' if no_ascii else img2ascii(colorless_frame, ascii_map)
         # s = cmap_color(s, frame, frame.shape[1]+1, freq, 1) if not colorless else s
-        while old_size != (old_size:=cpredict_insert_color_size(frame, freq)) and old_size < 16000:
+        while freq > 1 and cpredict_insert_color_size(frame, freq) < 16000:
             freq -= 5
-        while cpredict_insert_color_size(frame, freq) > 16200:
-            freq += 1
         freq = max(freq, 1)
+        while cpredict_insert_color_size(frame, freq) > 16200 and freq < 255:
+            freq += 1
         ns = cinsert_color(s, frame, freq) if not colorless else s
-        # print(f'S: {len(s)}, freq: {freq}')
-        # freq += (get_optimal_threshold(freq, len(s), len(ns)) - freq) // 1
-        # freq = min(max(freq, 1), 254)
+        
         while i > fps * (time.time() - start[0]):
             pass
         sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns

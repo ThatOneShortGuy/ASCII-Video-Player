@@ -202,25 +202,26 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
     YCbCr YCbCr_color;
 
     int length = 0;
-    printf("Threshold of change: %zd\n", threshold_of_change);
+    // printf("Threshold of change: %zd\n", threshold_of_change);
 
     for (int col=0; col < h; ++col) {
         for (int row=0; row < w; ++row) {
             current_color.b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
             current_color.g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
             current_color.r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
-            printf("prev: r: %d, g: %d, b: %d\n", prev_color.r, prev_color.g, prev_color.b);
-            printf("      r: %d, g: %d, b: %d\n\n", current_color.r, current_color.g, current_color.b);
+
+            // printf("prev: r: %d, g: %d, b: %d\n", prev_color.r, prev_color.g, prev_color.b);
+            // printf("      r: %d, g: %d, b: %d\n\n", current_color.r, current_color.g, current_color.b);
 
             // Convert to YCbCr
             to_YCbCr(&current_color, &YCbCr_color);
-            printf("prev: y: %d, cb: %d, cr: %d\n", prev_YCbCr.y, prev_YCbCr.cb, prev_YCbCr.cr);
-            printf("      y: %d, cb: %d, cr: %d\n", YCbCr_color.y, YCbCr_color.cb, YCbCr_color.cr);
+            // printf("prev: y: %d, cb: %d, cr: %d\n", prev_YCbCr.y, prev_YCbCr.cb, prev_YCbCr.cr);
+            // printf("      y: %d, cb: %d, cr: %d\n", YCbCr_color.y, YCbCr_color.cb, YCbCr_color.cr);
 
-            getchar();
-            getchar();
+            // getchar();
+            // getchar();
 
-            if (abs(YCbCr_color.cb - prev_YCbCr.cb) + abs(YCbCr_color.cr - prev_YCbCr.cr) > threshold_of_change || prev_YCbCr.y - YCbCr_color.y > threshold_of_change) {
+            if (abs(YCbCr_color.cb - prev_YCbCr.cb) + abs(YCbCr_color.cr - prev_YCbCr.cr) > threshold_of_change || abs(prev_YCbCr.y - YCbCr_color.y) > threshold_of_change) {
                 length += 7;
                 length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
                 length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
@@ -233,10 +234,11 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
             } else {
                 length++;
             }
-            printf("Length: %d\n\n", length);
+            // printf("Length: %d\n\n", length);
         }
         length++;
     }
+    // printf("Length: %d\n", length);
     Py_DECREF(img);
     return PyLong_FromLong(length);
 
@@ -272,12 +274,20 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             current_color.r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
             char_string = string[col*(w+1) + row];
 
+            // printf("prev: r: %d, g: %d, b: %d\n", prev_color.r, prev_color.g, prev_color.b);
+            // printf("      r: %d, g: %d, b: %d\n\n", current_color.r, current_color.g, current_color.b);
+
             // Convert to YCbCr
             to_YCbCr(&current_color, &YCbCr_color);
+            // printf("prev: y: %d, cb: %d, cr: %d\n", prev_YCbCr.y, prev_YCbCr.cb, prev_YCbCr.cr);
+            // printf("      y: %d, cb: %d, cr: %d\n", YCbCr_color.y, YCbCr_color.cb, YCbCr_color.cr);
+
+            // getchar();
+            // getchar();
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
-            if (abs(YCbCr_color.cb - prev_YCbCr.cb) + abs(YCbCr_color.cr - prev_YCbCr.cr) > threshold_of_change || prev_YCbCr.y - YCbCr_color.y > threshold_of_change) {
-                int len = swprintf(new_string + length, COLOR_SIZE*2, L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
+            if (abs(YCbCr_color.cb - prev_YCbCr.cb) + abs(YCbCr_color.cr - prev_YCbCr.cr) > threshold_of_change || abs(prev_YCbCr.y - YCbCr_color.y) > threshold_of_change) {
+                int len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
                 // printf("%dx%d len: %d\n", row, col, len);
                 if (len == -1) {
                     printf("Error copying color string\n");
@@ -285,9 +295,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
                 }
             
                 length += len;
-                prev_color.r = current_color.r;
-                prev_color.g = current_color.g;
-                prev_color.b = current_color.b;
+                prev_color = current_color;
                 prev_YCbCr = YCbCr_color;
             }
             // printf("length: %d, rowxcolumn: %d\n", length, col*(w+1) + row);
@@ -298,10 +306,10 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
         length += 1;
         // wprintf(L"%ls", new_string);
     }
-    // printf("Length: %d\n", length);
     PyObject *ret = PyUnicode_FromWideChar(new_string, length);
     free(new_string);
-    free(string);
+    // printf("Length: %d\n", length);
+    PyMem_Free(string);
     Py_DECREF(img);
     return ret;
 }
