@@ -131,7 +131,7 @@ if __name__ == "__main__":
     ffmpeg = ''
     # Add args if python run in debug mode
     if sys.gettrace():
-        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d'])
+        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d', '-s', '10:-1'])
     usage = f'''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
         -h : Show this help message

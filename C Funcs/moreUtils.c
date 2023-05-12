@@ -15,6 +15,24 @@ typedef struct {
     unsigned char b;
 } pixel;
 
+typedef struct {
+    unsigned char y;
+    unsigned char cb;
+    unsigned char cr;
+} YCbCr;
+
+void to_YCbCr(pixel *inpix, YCbCr *outpix) {
+    outpix->y = (unsigned char) (0.299 * inpix->r + 0.587 * inpix->g + 0.114 * inpix->b);
+    outpix->cb = (unsigned char) (128 - 0.168736 * inpix->r - 0.331264 * inpix->g + 0.5 * inpix->b);
+    outpix->cr = (unsigned char) (128 + 0.5 * inpix->r - 0.418688 * inpix->g - 0.081312 * inpix->b);
+}
+
+void to_RGB(YCbCr *inpix, pixel *outpix) {
+    outpix->r = (unsigned char) (inpix->y + 1.402 * (inpix->cr - 128));
+    outpix->g = (unsigned char) (inpix->y - 0.344136 * (inpix->cb - 128) - 0.714136 * (inpix->cr - 128));
+    outpix->b = (unsigned char) (inpix->y + 1.772 * (inpix->cb - 128));
+}
+
 void compute_row(pixel *output, int i, int wfreq, int h, int w, int freq, PyObject *img) {
     // printf("i: %d, wfreq: %d, h: %d, w: %d, freq: %d\n", i, wfreq, h, w, freq);
 
