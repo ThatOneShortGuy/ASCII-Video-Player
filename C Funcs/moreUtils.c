@@ -34,11 +34,12 @@ void to_RGB(YCbCr *inpix, pixel *outpix) {
 }
 
 int compare_YCbCr_values(YCbCr *pix1, YCbCr *pix2, int threshold) {
-    return (abs(pix1->cb - pix2->cb) + abs(pix1->cr - pix2->cr) > threshold || abs(pix1->y - pix2->y) > threshold*2) && pix1->y > 50;
+    return (abs(pix1->cb - pix2->cb) + abs(pix1->cr - pix2->cr) > threshold || abs(pix1->y - pix2->y) > threshold*2) && pix1->y > threshold;
 }
 
 int check_in_ansi_range(YCbCr *pix, int threshold) {
-    YCbCr DarkRed, DarkGreen, DarkYellow, DarkBlue, DarkMagenta, DarkCyan, DarkWhite, BrightBlack, BrightRed, BrightGreen, BrightYellow, BrightBlue, BrightMagenta, BrightCyan, White;
+    YCbCr Black, DarkRed, DarkGreen, DarkYellow, DarkBlue, DarkMagenta, DarkCyan, DarkWhite, BrightBlack, BrightRed, BrightGreen, BrightYellow, BrightBlue, BrightMagenta, BrightCyan, White;
+    Black.y = 0; Black.cb = 128; Black.cr = 128;
     DarkRed.y = 71; DarkRed.cb = 105; DarkRed.cr = 218;
     DarkGreen.y = 102; DarkGreen.cb = 78; DarkGreen.cr = 69;
     DarkYellow.y = 149; DarkYellow.cb = 44; DarkYellow.cr = 159;
@@ -54,6 +55,23 @@ int check_in_ansi_range(YCbCr *pix, int threshold) {
     BrightMagenta.y = 72; BrightMagenta.cb = 177; BrightMagenta.cr = 205;
     BrightCyan.y = 179; BrightCyan.cb = 148; BrightCyan.cr = 70;
     White.y = 242; White.cb = 128; White.cr = 128;
+    if (!compare_YCbCr_values(pix, &Black,         threshold/2)) return 30;
+    if (!compare_YCbCr_values(pix, &DarkRed,       threshold/2)) return 31;
+    if (!compare_YCbCr_values(pix, &DarkGreen,     threshold/2)) return 32;
+    if (!compare_YCbCr_values(pix, &DarkYellow,    threshold/2)) return 33;
+    if (!compare_YCbCr_values(pix, &DarkBlue,      threshold/2)) return 34;
+    if (!compare_YCbCr_values(pix, &DarkMagenta,   threshold/2)) return 35;
+    if (!compare_YCbCr_values(pix, &DarkCyan,      threshold/2)) return 36;
+    if (!compare_YCbCr_values(pix, &DarkWhite,     threshold/4)) return 37;
+    if (!compare_YCbCr_values(pix, &BrightBlack,   threshold/2)) return 90;
+    if (!compare_YCbCr_values(pix, &BrightRed,     threshold/2)) return 91;
+    if (!compare_YCbCr_values(pix, &BrightGreen,   threshold/2)) return 92;
+    if (!compare_YCbCr_values(pix, &BrightYellow,  threshold/2)) return 93;
+    if (!compare_YCbCr_values(pix, &BrightBlue,    threshold/2)) return 94;
+    if (!compare_YCbCr_values(pix, &BrightMagenta, threshold/2)) return 95;
+    if (!compare_YCbCr_values(pix, &BrightCyan,    threshold/2)) return 96;
+    if (!compare_YCbCr_values(pix, &White,         threshold/4)) return 97;
+    return -1;
 }
 
 void compute_row(pixel *output, int i, int wfreq, int h, int w, int freq, PyObject *img) {

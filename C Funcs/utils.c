@@ -191,17 +191,18 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
         return NULL;
     }
     img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
-    size_t threshold_of_change = PyLong_AsLong(pythreshold_of_change);
+    int threshold_of_change = (int) PyLong_AsLong(pythreshold_of_change);
 
     int h = (int) PyArray_DIM(img, 0);
     int w = (int) PyArray_DIM(img, 1);
 
     pixel prev_color = { 255, 255, 255};
     pixel current_color;
-    YCbCr prev_YCbCr = { 255, 128, 128 };
+    YCbCr prev_YCbCr = { 255, 255, 255 };
     YCbCr YCbCr_color;
 
     int length = 0;
+    int change;
     // printf("Threshold of change: %zd\n", threshold_of_change);
 
     for (int col=0; col < h; ++col) {
@@ -222,10 +223,14 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
             // getchar();
 
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
-                length += 7;
-                length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
-                length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
-                length += 5*(current_color.b>=100) + 4*(current_color.b>=10 && current_color.b<100) + 3*(current_color.b<10); // to account for "m_"
+                if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
+                    length += 7;
+                    length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
+                    length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
+                    length += 5*(current_color.b>=100) + 4*(current_color.b>=10 && current_color.b<100) + 3*(current_color.b<10); // to account for "m_"
+                } else {
+                    length += 6;
+                }
                 prev_color.r = current_color.r;
                 prev_color.g = current_color.g;
                 prev_color.b = current_color.b;
@@ -253,7 +258,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
     
     Py_ssize_t string_len = PyUnicode_GetLength(s);
     img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
-    size_t threshold_of_change = PyLong_AsLong(pythreshold_of_change);
+    int threshold_of_change = (int) PyLong_AsLong(pythreshold_of_change);
     wchar_t *string = PyUnicode_AsWideCharString(s, &string_len);
 
     int h = (int) PyArray_DIM(img, 0);
@@ -261,11 +266,12 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
 
     pixel prev_color = { 255, 255, 255 };
     pixel current_color;
-    YCbCr prev_YCbCr = { 255, 128, 128 };
+    YCbCr prev_YCbCr = { 255, 255, 255 };
     YCbCr YCbCr_color;
     int length = 0;
     wchar_t char_string;
     wchar_t *new_string = malloc(sizeof(wchar_t) * (string_len * 19 + 1));
+    int change, len;
     
     for (int col=0; col < h; ++col) {
         for (int row=0; row < w; ++row) {
@@ -287,7 +293,11 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
-                int len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
+                if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
+                    len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
+                } else {
+                    len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[%dm", change);
+                }
                 // printf("%dx%d len: %d\n", row, col, len);
                 if (len == -1) {
                     printf("Error copying color string\n");
