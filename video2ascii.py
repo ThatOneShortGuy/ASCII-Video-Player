@@ -17,6 +17,7 @@ class Args:
     freq = COLOR_SAMPLE_FREQ
     no_ascii = False
     size = SIZE
+    start_time = 0
     fps = None
     tempo = 1
     ffmpeg = ''
@@ -71,6 +72,9 @@ def read_video(args: Args, start_time=None):
             atempo *= 2
             afilters += ',atempo=2' if afilters else 'atempo=2'
         afilters += f',atempo={atempo}' if afilters else f'atempo={atempo}'
+    
+    if args.start_time:
+        ffmpeg += f' -ss {args.start_time/args.tempo}'
 
     vidp = subprocess.Popen(
         f'ffmpeg -i "{args.video_path}" -pix_fmt bgr24 -vf fps={args.fps},{vfilters+"," if vfilters else ""}scale={size[0]}:{size[1]} {ffmpeg} -f rawvideo -',
@@ -154,6 +158,7 @@ if __name__ == "__main__":
         --no-ascii : Don't use ascii characters to represent the video (default: {Args.no_ascii})
         -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
         -s <width>:<height> : Size/scale of the output video (default: {SIZE[0]}:{SIZE[1]})
+        -ss : Skip to specified time in the video in seconds. (default: {Args.start_time})
         -t <tempo>, --tempo <tempo> : Tempo of the output video (ex. 1x speed, 2x speed, 1.75x speed) (default: {Args.tempo})
         
         --ffmpeg [...] : All commands after this will be passed to ffmpeg'''
@@ -178,6 +183,8 @@ if __name__ == "__main__":
             Args.fps = int(sys.argv.pop(1))
         elif val in ('-s'):
             Args.size = tuple(map(int, sys.argv.pop(1).split(':')))
+        elif val in ('-ss'):
+            Args.start_time = float(sys.argv.pop(1))
         elif val in ('-t', '--tempo'):
             Args.tempo = float(sys.argv.pop(1))
         elif val in ('--ffmpeg'):
