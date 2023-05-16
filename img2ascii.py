@@ -156,7 +156,8 @@ def main():
     w, h = calc_ratio(w, h, img)
     img = cv2.resize(img, (w, h))
     freq = max(1, freq)
-    ascii_map = load_ascii_map('ascii_darkmap.dat')
+    path_to_self = os.path.dirname(os.path.realpath(__file__))
+    ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
     # ns = get_colored_ascii(img, ascii_map, freq)
     # print(ns)
     # print(f"Length of old string: {len(ns)}")
@@ -164,7 +165,7 @@ def main():
     s = img2ascii(no_color_img, ascii_map)
     ns = cinsert_color(s, img, freq)
     print(ns)
-    
+    print('\033[0m')
     return ns
 
 if __name__ == "__main__":

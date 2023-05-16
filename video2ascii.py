@@ -8,13 +8,13 @@ import subprocess
 import numpy as np
 
 SIZE = 170, -1
-COLOR_SAMPLE_FREQ = 10
+MAX_CHARS = 16200
 
 class Args:
     video_path = 'crf18.mp4'
     colorless = False
     debug = False
-    freq = COLOR_SAMPLE_FREQ
+    freq = 30
     no_ascii = False
     size = SIZE
     start_time = 0
@@ -130,10 +130,10 @@ def show_video(args: Args):
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n' if args.no_ascii else img2ascii(colorless_frame, ascii_map)
         # s = cmap_color(s, frame, frame.shape[1]+1, freq, 1) if not colorless else s
-        while freq > 1 and cpredict_insert_color_size(frame, freq) < 16000:
+        while freq > 1 and cpredict_insert_color_size(frame, freq) < MAX_CHARS - 200:
             freq -= 5
         freq = max(freq, 1)
-        while cpredict_insert_color_size(frame, freq) > 16200 and freq < 255:
+        while cpredict_insert_color_size(frame, freq) > MAX_CHARS and freq < 255:
             freq += 1
         ns = cinsert_color(s, frame, freq) if not args.colorless else s
         

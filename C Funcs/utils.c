@@ -196,7 +196,6 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
     int h = (int) PyArray_DIM(img, 0);
     int w = (int) PyArray_DIM(img, 1);
 
-    pixel prev_color = { 255, 255, 255};
     pixel current_color;
     YCbCr prev_YCbCr = { 255, 255, 255 };
     YCbCr YCbCr_color;
@@ -223,9 +222,6 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
                 } else {
                     length += 6;
                 }
-                prev_color.r = current_color.r;
-                prev_color.g = current_color.g;
-                prev_color.b = current_color.b;
                 prev_YCbCr = YCbCr_color;
 
             } else {
@@ -256,7 +252,6 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
     int h = (int) PyArray_DIM(img, 0);
     int w = (int) PyArray_DIM(img, 1);
 
-    pixel prev_color = { 255, 255, 255 };
     pixel current_color;
     YCbCr prev_YCbCr = { 255, 255, 255 };
     YCbCr YCbCr_color;
@@ -290,7 +285,6 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
                 }
             
                 length += len;
-                prev_color = current_color;
                 prev_YCbCr = YCbCr_color;
             }
             // printf("length: %d, rowxcolumn: %d\n", length, col*(w+1) + row);
