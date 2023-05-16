@@ -211,7 +211,7 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
             // Convert to YCbCr
             to_YCbCr(&current_color, &YCbCr_color);
 
-            if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
+            // if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
 
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
                 if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
@@ -269,7 +269,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             to_YCbCr(&current_color, &YCbCr_color);
 
             // If the color of the pixel and the rest of the row is too dark, just make a new line.
-            if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
+            // if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
