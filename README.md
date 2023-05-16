@@ -47,8 +47,9 @@ python video2ascii.py <video path> [options]
 - `--colorless`: Don't use color in the output (default: False)
 - `-d`, `--debug`: Show debug information (default: False)
 - `--no-ascii`: Don't use ascii characters to represent the video (default: False)
-- `-r <fps>, --fps <fps>`: Frames per second. The framerate to play the video back at (default: video's framerate)
+- `-r <fps>`, `--fps <fps>`: Frames per second. The framerate to play the video back at (default: video's framerate)
 - `-s <width>:<height>`: Size of the output video. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 160:-1)
+- `-t <tempo>`, `--tempo <tempo>` : Tempo of the output video (ex. 1x speed, 2x speed, 1.75x speed) (default: 1)
 - `--ffmpeg [...]`: All commands after this will be passed to ffmpeg video decoder. See [ffmpeg documentation](https://ffmpeg.org/ffmpeg.html) for more information (default: None)
 
 ## Image to ASCII Art
