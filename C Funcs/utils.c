@@ -207,20 +207,12 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
 
     for (int col=0; col < h; ++col) {
         for (int row=0; row < w; ++row) {
-            current_color.b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
-            current_color.g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
-            current_color.r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
-
-            // printf("prev: r: %d, g: %d, b: %d\n", prev_color.r, prev_color.g, prev_color.b);
-            // printf("      r: %d, g: %d, b: %d\n\n", current_color.r, current_color.g, current_color.b);
+            get_pixel(&current_color, img, col, row);
 
             // Convert to YCbCr
             to_YCbCr(&current_color, &YCbCr_color);
-            // printf("prev: y: %d, cb: %d, cr: %d\n", prev_YCbCr.y, prev_YCbCr.cb, prev_YCbCr.cr);
-            // printf("      y: %d, cb: %d, cr: %d\n", YCbCr_color.y, YCbCr_color.cb, YCbCr_color.cr);
 
-            // getchar();
-            // getchar();
+            if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
 
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
                 if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
@@ -275,21 +267,14 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
     
     for (int col=0; col < h; ++col) {
         for (int row=0; row < w; ++row) {
-            current_color.b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
-            current_color.g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
-            current_color.r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
+            get_pixel(&current_color, img, col, row);
             char_string = string[col*(w+1) + row];
-
-            // printf("prev: r: %d, g: %d, b: %d\n", prev_color.r, prev_color.g, prev_color.b);
-            // printf("      r: %d, g: %d, b: %d\n\n", current_color.r, current_color.g, current_color.b);
 
             // Convert to YCbCr
             to_YCbCr(&current_color, &YCbCr_color);
-            // printf("prev: y: %d, cb: %d, cr: %d\n", prev_YCbCr.y, prev_YCbCr.cb, prev_YCbCr.cr);
-            // printf("      y: %d, cb: %d, cr: %d\n", YCbCr_color.y, YCbCr_color.cb, YCbCr_color.cr);
 
-            // getchar();
-            // getchar();
+            // If the color of the pixel and the rest of the row is too dark, just make a new line.
+            if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {

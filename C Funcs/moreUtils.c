@@ -37,6 +37,25 @@ int compare_YCbCr_values(YCbCr *pix1, YCbCr *pix2, int threshold) {
     return (abs(pix1->cb - pix2->cb) + abs(pix1->cr - pix2->cr) > threshold || abs(pix1->y - pix2->y) > threshold*2) && pix1->y > threshold;
 }
 
+#pragma auto_inline(on)
+int get_pixel(pixel *pix, PyObject *img, int col, int row) {
+    pix->b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
+    pix->g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
+    pix->r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
+    return 0;
+}
+
+int row_continual(PyObject *img, int col, int row, int w, int threshold_of_change){
+    pixel pix1;
+    YCbCr colors;
+    while (row++ < w) {
+        get_pixel(&pix1, img, col, row);
+        to_YCbCr(&pix1, &colors);
+        if (colors.y > threshold_of_change) return 0;
+    }
+    return 1;
+}
+
 int check_in_ansi_range(YCbCr *pix, int threshold) {
     YCbCr Black, DarkRed, DarkGreen, DarkYellow, DarkBlue, DarkMagenta, DarkCyan, DarkWhite, BrightBlack, BrightRed, BrightGreen, BrightYellow, BrightBlue, BrightMagenta, BrightCyan, White;
     Black.y = 0; Black.cb = 128; Black.cr = 128;
