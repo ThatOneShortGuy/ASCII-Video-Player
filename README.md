@@ -16,16 +16,15 @@
 This program converts images or videos to colored ASCII art. It uses the in house methods from this directory to create the ASCII art. The characters used for the ASCII art are calculated by using the [create_characters.py](create_characters.py) script with the [create_ascii_darkmap.py](create_ascii_darkmap.py) script. The characters are then stored in the [ascii_darkmap.dat](ascii_darkmap.dat) file. The [img2ascii.py](img2ascii.py) and [video2ascii.py](video2ascii.py) scripts use the [ascii_darkmap.dat](ascii_darkmap.dat) file to convert images or videos to ASCII art. If you don't have the [ascii_darkmap.dat](ascii_darkmap.dat) in your directory, the programs will not work.
 
 # Dependencies and Requirements
-- Python 3.8 or higher (tested on 3.9.6)
+- Python 3.8+
 - cv2
 - numpy
-- ffmpeg [for the video to ASCII converter] (you will need to have the ffmpeg.exe in your PATH environment)
-- ffplay [for the video to ASCII converter] (you will need to have the ffplay.exe in your PATH environment for audio playback)
-- psutil [for the video to ASCII converter] (you will need to install this using pip)
+- ffmpeg [for the video to ASCII converter] (you will need to have the ffmpeg executable in your PATH environment)
+- ffplay [for the video to ASCII converter] (you will need to have the ffplay executable in your PATH environment for audio playback)
 
 To install the dependencies, run the following command:
 ```bash
-pip install -U opencv-python psutil
+pip install -U opencv-python
 ```
 
 # How to compile and run
@@ -49,6 +48,7 @@ python video2ascii.py <video path> [options]
 - `--no-ascii`: Don't use ascii characters to represent the video (default: False)
 - `-r <fps>`, `--fps <fps>`: Frames per second. The framerate to play the video back at (default: video's framerate)
 - `-s <width>:<height>`: Size of the output video. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 160:-1)
+- `-ss`: Skip to specified time in the video in seconds. (default: 0)
 - `-t <tempo>`, `--tempo <tempo>` : Tempo of the output video (ex. 1x speed, 2x speed, 1.75x speed) (default: 1)
 - `--ffmpeg [...]`: All commands after this will be passed to ffmpeg video decoder. See [ffmpeg documentation](https://ffmpeg.org/ffmpeg.html) for more information (default: None)
 
