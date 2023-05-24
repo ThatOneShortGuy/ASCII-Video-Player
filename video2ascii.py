@@ -1,5 +1,5 @@
-from img2ascii import img2ascii, load_ascii_map, get_color_samples, map_color, insert_color, predict_insert_color_size, get_optimal_threshold
-from cimg2ascii import cmap_color, cget_color_samples, cpredict_insert_color_size, cinsert_color
+from img2ascii import img2ascii, load_ascii_map
+from cimg2ascii import cpredict_insert_color_size, cinsert_color
 import sys
 import os
 import cv2
