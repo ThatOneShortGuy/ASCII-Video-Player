@@ -45,7 +45,7 @@ def main():
     if input_file == '-h':
         print(help_message)
         sys.exit(0)
-    elif not os.path.isfile(input_file):
+    if not os.path.isfile(input_file):
         print(f'File "{input_file}" not found')
         sys.exit(1)
     while len(sys.argv) > 1:

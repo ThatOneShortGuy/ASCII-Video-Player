@@ -166,6 +166,9 @@ if __name__ == "__main__":
         print(usage)
         sys.exit(0)
     Args.video_path = sys.argv.pop(1) if len(sys.argv) > 1 else Args.video_path
+    if Args.video_path in ('-h', '--help'):
+        print(usage)
+        sys.exit(0)
     if not os.path.isfile(Args.video_path):
         print(f'File "{Args.video_path}" not found')
         sys.exit(1)
