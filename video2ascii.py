@@ -152,10 +152,10 @@ if __name__ == "__main__":
     Options:
         -h : Show this help message
 
-        --colorless : Don't use color in the output (default: {Args.colorless})
         -d, --debug : Show debug information (default: {Args.debug})
         -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: {Args.freq})
         --no-ascii : Don't use ascii characters to represent the video (default: {Args.no_ascii})
+        --no-color : Don't use color in the output (default: {Args.colorless})
         -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
         -s <width>:<height> : Size/scale of the output video (default: {SIZE[0]}:{SIZE[1]})
         -ss : Skip to specified time in the video in seconds. (default: {Args.start_time})
