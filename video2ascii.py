@@ -171,7 +171,7 @@ if __name__ == "__main__":
         sys.exit(1)
     while len(sys.argv) > 1:
         val = sys.argv.pop(1)
-        if val in ('--colorless'):
+        if val in ('--no-color'):
             Args.colorless = True
         elif val in ('-d', '--debug'):
             Args.debug = True
