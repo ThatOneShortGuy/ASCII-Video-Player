@@ -151,7 +151,7 @@ def show_video(args: Args):
             continue
         
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        s = '\033[E'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\033[E' if args.no_ascii else img2ascii(colorless_frame, ascii_map)
+        s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else img2ascii(colorless_frame, ascii_map)
         
         while freq > 1 and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
             freq -= 5
