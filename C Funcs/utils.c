@@ -12,7 +12,7 @@
 
 #define COLOR_SIZE 20
 
-static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
+static PyObject *py_predict_insert_color_size(PyObject *self, PyObject *args) {
     PyObject *img, *pythreshold_of_change;
     if (!PyArg_ParseTuple(args, "OO", &img, &pythreshold_of_change)) {
         printf("Error parsing args\n");
@@ -20,52 +20,19 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
     }
     img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
     int threshold_of_change = (int) PyLong_AsLong(pythreshold_of_change);
-
+    
     int h = (int) PyArray_DIM(img, 0);
     int w = (int) PyArray_DIM(img, 1);
 
-    pixel current_color;
-    YCbCr prev_YCbCr = { 255, 255, 255 };
-    YCbCr YCbCr_color;
-
-    int length = 0;
-    int change;
-    // printf("Threshold of change: %zd\n", threshold_of_change);
-
-    for (int col=0; col < h; ++col) {
-        for (int row=0; row < w; ++row) {
-            get_pixel(&current_color, img, col, row);
-
-            // Convert to YCbCr
-            to_YCbCr(&current_color, &YCbCr_color);
-
-            // if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
-
-            if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
-                if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
-                    length += 7;
-                    length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
-                    length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
-                    length += 5*(current_color.b>=100) + 4*(current_color.b>=10 && current_color.b<100) + 3*(current_color.b<10); // to account for "m_"
-                } else {
-                    length += 6;
-                }
-                prev_YCbCr = YCbCr_color;
-
-            } else {
-                length++;
-            }
-            // printf("Length: %d\n\n", length);
-        }
-        length+=3;
-    }
+    int length = predict_insert_color_size(h, w, img, threshold_of_change);
+    
     // printf("Length: %d\n", length);
     Py_DECREF(img);
     return PyLong_FromLong(length);
 
 }
 
-static PyObject *cinsert_color(PyObject *self, PyObject *args){
+static PyObject *py_insert_color(PyObject *self, PyObject *args) {
     PyObject *s, *img, *pythreshold_of_change;
     if (!PyArg_ParseTuple(args, "OOO", &s, &img, &pythreshold_of_change)) {
         printf("Error parsing args\n");
@@ -80,7 +47,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
     int h = (int) PyArray_DIM(img, 0);
     int w = (int) PyArray_DIM(img, 1);
 
-    pixel current_color;
+    Pixel current_color;
     YCbCr prev_YCbCr = { 255, 255, 255 };
     YCbCr YCbCr_color;
     int length = 0;
@@ -96,7 +63,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             // Convert to YCbCr
             to_YCbCr(&current_color, &YCbCr_color);
 
-            // If the color of the pixel and the rest of the row is too dark, just make a new line.
+            // If the color of the Pixel and the rest of the row is too dark, just make a new line.
             // if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
@@ -119,7 +86,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             new_string[length] = char_string;
             length += 1;
         }
-        length += swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[E", change);;
+        length += swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[E");;
         // wprintf(L"%ls", new_string);
     }
     PyObject *ret = PyUnicode_FromWideChar(new_string, length);
@@ -130,9 +97,67 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
     return ret;
 }
 
+static PyObject *py_img2ascii(PyObject *self, PyObject *args) {
+    PyObject *pyimg, *pyascii_map;
+    if (!PyArg_ParseTuple(args, "OO", &pyimg, &pyascii_map)) {
+        printf("Error parsing args in img2ascii\n");
+        return NULL;
+    }
+    pyimg = PyArray_FROM_OTF(pyimg, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
+
+    wchar_t ascii_map[256];
+    PyUnicode_AsWideChar(pyascii_map, ascii_map, 256);
+
+    int h = (int) PyArray_DIM(pyimg, 0);
+    int w = (int) PyArray_DIM(pyimg, 1);
+
+    Pixel BGR_color;
+    YCbCr YCbCr_color;
+
+    int length = 0;
+    wchar_t *string = malloc(sizeof(wchar_t) * (h * (w+1) + 1));
+
+    for (int col=0;col<h;++col) {
+        for (int row=0;row<w;++row) {
+            get_pixel(&BGR_color, pyimg, col, row);
+            to_YCbCr(&BGR_color, &YCbCr_color);
+            string[length] = ascii_map[YCbCr_color.y];
+            length++;
+        }
+        string[length] = '\n';
+        length++;
+    }
+    PyObject *ret = PyUnicode_FromWideChar(string, length);
+    free(string);
+    Py_DECREF(pyimg);
+    return ret;
+}
+
+static PyObject *py_get_freq(PyObject *self, PyObject *args) {
+    PyObject *pyfreq, *pymin_freq, *pyframe, *pymax_chars;
+    if (!PyArg_ParseTuple(args, "OOOO", &pyfreq, &pymin_freq, &pyframe, &pymax_chars)) {
+        printf("Error parsing args in get_freq\n");
+        return NULL;
+    }
+    long freq = PyLong_AsLong(pyfreq);
+    long min_freq = PyLong_AsLong(pymin_freq);
+    pyframe = PyArray_FROM_OTF(pyframe, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
+    long max_chars = PyLong_AsLong(pymax_chars);
+
+    int h = (int) PyArray_DIM(pyframe, 0);
+    int w = (int) PyArray_DIM(pyframe, 1);
+
+    freq = get_freq(freq, min_freq, h, w, pyframe, max_chars);
+
+    Py_DECREF(pyframe);
+    return PyLong_FromLong(freq);
+}
+
 static PyMethodDef UtilsMethods[] = {
-    {"cpredict_insert_color_size", (PyCFunction)cpredict_insert_color_size, METH_VARARGS, "Predict the size of the resulting string"},
-    {"cinsert_color", (PyCFunction)cinsert_color, METH_VARARGS, "Insert color to string from image"},
+    {"cpredict_insert_color_size", (PyCFunction)py_predict_insert_color_size, METH_VARARGS, "Predict the size of the resulting string"},
+    {"cinsert_color", (PyCFunction)py_insert_color, METH_VARARGS, "Insert color to string from image"},
+    {"cimg2ascii", (PyCFunction)py_img2ascii, METH_VARARGS, "Convert image to ascii"},
+    {"cget_freq", (PyCFunction)py_get_freq, METH_VARARGS, "Get the optimal frequency of the frame"},
     {NULL, NULL, 0, NULL}
 };
 

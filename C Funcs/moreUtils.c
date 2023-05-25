@@ -13,7 +13,7 @@ typedef struct {
     unsigned char r;
     unsigned char g;
     unsigned char b;
-} pixel;
+} Pixel;
 
 typedef struct {
     unsigned char y;
@@ -21,13 +21,13 @@ typedef struct {
     unsigned char cr;
 } YCbCr;
 
-void to_YCbCr(pixel *inpix, YCbCr *outpix) {
+void to_YCbCr(Pixel *inpix, YCbCr *outpix) {
     outpix->y = (unsigned char) (0.299 * inpix->r + 0.587 * inpix->g + 0.114 * inpix->b);
     outpix->cb = (unsigned char) (128 - 0.168736 * inpix->r - 0.331264 * inpix->g + 0.5 * inpix->b);
     outpix->cr = (unsigned char) (128 + 0.5 * inpix->r - 0.418688 * inpix->g - 0.081312 * inpix->b);
 }
 
-void to_RGB(YCbCr *inpix, pixel *outpix) {
+void to_RGB(YCbCr *inpix, Pixel *outpix) {
     outpix->r = (unsigned char) (inpix->y + 1.402 * (inpix->cr - 128));
     outpix->g = (unsigned char) (inpix->y - 0.344136 * (inpix->cb - 128) - 0.714136 * (inpix->cr - 128));
     outpix->b = (unsigned char) (inpix->y + 1.772 * (inpix->cb - 128));
@@ -37,15 +37,66 @@ int compare_YCbCr_values(YCbCr *pix1, YCbCr *pix2, int threshold) {
     return (abs(pix1->cb - pix2->cb) + abs(pix1->cr - pix2->cr) > threshold || abs(pix1->y - pix2->y) > threshold*2) && pix1->y > threshold;
 }
 
-int get_pixel(pixel *pix, PyObject *img, int col, int row) {
+int get_pixel(Pixel *pix, PyObject *img, int col, int row) {
     pix->b = *(unsigned char *) PyArray_GETPTR3(img, col, row, 0);
     pix->g = *(unsigned char *) PyArray_GETPTR3(img, col, row, 1);
     pix->r = *(unsigned char *) PyArray_GETPTR3(img, col, row, 2);
     return 0;
 }
 
+int predict_insert_color_size(int h, int w, PyObject *img, int threshold_of_change) {
+
+    Pixel current_color;
+    YCbCr prev_YCbCr = { 255, 255, 255 };
+    YCbCr YCbCr_color;
+
+    int length = 0;
+    int change;
+    // printf("Threshold of change: %zd\n", threshold_of_change);
+
+    for (int col=0; col < h; ++col) {
+        for (int row=0; row < w; ++row) {
+            get_pixel(&current_color, img, col, row);
+
+            // Convert to YCbCr
+            to_YCbCr(&current_color, &YCbCr_color);
+
+            // if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
+
+            if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
+                if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
+                    length += 7;
+                    length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
+                    length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
+                    length += 5*(current_color.b>=100) + 4*(current_color.b>=10 && current_color.b<100) + 3*(current_color.b<10); // to account for "m_"
+                } else {
+                    length += 6;
+                }
+                prev_YCbCr = YCbCr_color;
+
+            } else {
+                length++;
+            }
+            // printf("Length: %d\n\n", length);
+        }
+        length+=3;
+    }
+    return length;
+}
+
+int get_freq(long freq, long min_freq, int h, int w, PyObject *pyframe, long max_chars) {
+    while (freq > min_freq && predict_insert_color_size(h, w, pyframe, freq) < max_chars - 200) {
+        freq -= 4;
+    }
+    freq = freq < min_freq ? min_freq : freq;
+    while (predict_insert_color_size(h, w, pyframe, freq) > max_chars && freq < 255) {
+        freq += 1;
+    }
+    return freq;
+}
+
 int row_continual(PyObject *img, int col, int row, int w, int threshold_of_change){
-    pixel pix1;
+    Pixel pix1;
     YCbCr colors;
     while (row++ < w) {
         get_pixel(&pix1, img, col, row);

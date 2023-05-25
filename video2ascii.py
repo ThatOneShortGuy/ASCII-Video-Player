@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 
-from cimg2ascii import cinsert_color, cpredict_insert_color_size
+from cimg2ascii import cinsert_color, cpredict_insert_color_size, cimg2ascii, cget_freq
 from img2ascii import img2ascii, load_ascii_map
 
 SIZE = 250, -1
@@ -143,6 +143,13 @@ def read_video(args: Args, start_time=None):
         if audio:
             p.kill()
 
+def get_freq(freq: int, args: Args, frame: np.ndarray):
+    while freq > args.min_freq and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
+        freq -= 5
+    freq = max(freq, args.min_freq)
+    while cpredict_insert_color_size(frame, freq) > args.max_chars and freq < 255:
+        freq += 1
+    return freq
 
 def show_video(args: Args):
     args.fps = get_vid_fps(args.video_path) * args.tempo if args.fps is None else args.fps
@@ -162,14 +169,10 @@ def show_video(args: Args):
             skipped_frames += 1
             continue
         
-        colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else img2ascii(colorless_frame, ascii_map)
+        # colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else cimg2ascii(frame, ascii_map)
         
-        while freq > args.min_freq and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
-            freq -= 5
-        freq = max(freq, args.min_freq)
-        while cpredict_insert_color_size(frame, freq) > args.max_chars and freq < 255:
-            freq += 1
+        freq = cget_freq(freq, args.min_freq, frame, args.max_chars)
         ns = cinsert_color(s, frame, freq) if not args.colorless else s
         
         while i > args.fps * (time.time() - start[0]):
@@ -186,7 +189,7 @@ if __name__ == "__main__":
     
     # Add args if python run in debug mode
     if sys.gettrace():
-        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d', '-s', '10:-1', '-t', '2.5', '--ffmpeg', '-t', '10'])
+        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d', '-t', '2.5', '--ffmpeg', '-t', '10'])
     usage = f'''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
         -h : Show this help message

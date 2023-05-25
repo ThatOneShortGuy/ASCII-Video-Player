@@ -1,11 +1,11 @@
 import cv2
 import sys
 import os
-from cimg2ascii import cinsert_color
+from cimg2ascii import cinsert_color, cimg2ascii
 
 os.system("")
 
-SIZE = 266, -1
+SIZE = 120, -1
 COLOR_SAMPLE_FREQ = 1
 
 class Args:
@@ -17,7 +17,7 @@ class Args:
 
 def load_ascii_map(filename):
     with open(filename, 'rb') as f:
-        arr = [chr(int.from_bytes(f.read(2), 'big')) for _ in range(256)]
+        arr = ''.join([chr(int.from_bytes(f.read(2), 'big')) for _ in range(256)])
     return arr
 
 
