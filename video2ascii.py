@@ -143,14 +143,6 @@ def read_video(args: Args, start_time=None):
         if audio:
             p.kill()
 
-def get_freq(freq: int, args: Args, frame: np.ndarray):
-    while freq > args.min_freq and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
-        freq -= 5
-    freq = max(freq, args.min_freq)
-    while cpredict_insert_color_size(frame, freq) > args.max_chars and freq < 255:
-        freq += 1
-    return freq
-
 def show_video(args: Args):
     args.fps = get_vid_fps(args.video_path) * args.tempo if args.fps is None else args.fps
     path_to_self = os.path.dirname(os.path.realpath(__file__))
@@ -171,7 +163,6 @@ def show_video(args: Args):
         
         # colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else cimg2ascii(frame, ascii_map)
-        
         freq = cget_freq(freq, args.min_freq, frame, args.max_chars)
         ns = cinsert_color(s, frame, freq) if not args.colorless else s
         
