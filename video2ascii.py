@@ -1,14 +1,20 @@
-from img2ascii import img2ascii, load_ascii_map
-from cimg2ascii import cpredict_insert_color_size, cinsert_color
-import sys
+import io
 import os
-import cv2
-import time
 import subprocess
+import sys
+import time
+
+import cv2
 import numpy as np
 
+from cimg2ascii import cinsert_color, cpredict_insert_color_size
+from img2ascii import img2ascii, load_ascii_map
+
 SIZE = 170, -1
-MAX_CHARS = 16200
+MAX_CHARS = 49000
+
+print(io.DEFAULT_BUFFER_SIZE)
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=2)
 
 class Args:
     video_path = 'crf18.mp4'
@@ -49,18 +55,25 @@ def process_ffmpeg_args(args):
             extras.append(val)
     return vfilters, afilters, ' '.join(extras)
 
-
-def read_video(args: Args, start_time=None):
-    """
-    Reads a video file and returns a list of frames using ffmpeg
-    """
+def get_video_size(args: Args):
     if args.size[0] == -1:
         w, h = get_vid_dim(args.video_path)
         size = int(w * args.size[1] / h *2), args.size[1]
     elif args.size[1] == -1:
         w, h = get_vid_dim(args.video_path)
         size = args.size[0], int(h * args.size[0] / w / 2)
+    else:
+        size = args.size
+    
+    args.size = size
+    return size
 
+def read_video(args: Args, start_time=None):
+    """
+    Reads a video file and returns a list of frames using ffmpeg
+    """
+
+    size = args.size
     vfilters, afilters, ffmpeg = process_ffmpeg_args(args.ffmpeg)
     if args.tempo != 1:
         vfilters += f',setpts={1/args.tempo}*PTS' if vfilters else f'setpts={1/args.tempo}*PTS'
@@ -101,6 +114,7 @@ def read_video(args: Args, start_time=None):
     try:
         # data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
         p.stderr.read(69)
+        sys.stdout.write('\033[2J')
         yield data
         if start_time is not None:
             start_time[0] = time.time()
@@ -123,13 +137,19 @@ def show_video(args: Args):
     ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
     start = [time.time()]
     freq = args.freq
+    console_height = os.get_terminal_size()[1]
+    get_video_size(args)
+    displayed_frame_count = 0
+    sys.stdout.write(f'\033[{(console_height-Args.size[1]+1)//2}H\033[s')
     for i, frame in enumerate(read_video(args, start_time=start)):
         if frame is None:
             break
-        # colors = cget_color_samples(frame, freq)
+        if i+3 < args.fps * (time.time() - start[0]):
+            continue
+        
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\n' if args.no_ascii else img2ascii(colorless_frame, ascii_map)
-        # s = cmap_color(s, frame, frame.shape[1]+1, freq, 1) if not colorless else s
+        
         while freq > 1 and cpredict_insert_color_size(frame, freq) < MAX_CHARS - 200:
             freq -= 5
         freq = max(freq, 1)
@@ -139,8 +159,12 @@ def show_video(args: Args):
         
         while i > args.fps * (time.time() - start[0]):
             pass
-        sys.stdout.write(f'\033[0m\nfreq: {freq}\tframe: {i}\tfps: {i/(time.time()-start[0]):.4g} \tstrlen: {len(ns)}\n'+ns
-                         if args.debug else ns)
+        
+        displayed_frame_count += 1
+
+        data_str = f'freq: {str(freq).ljust(3)}frame: {str(i).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
+        sys.stdout.write(f'\033[u\033[0m{data_str}\033[E{ns}'
+                         if args.debug else f'\033[u{ns}')
 
 
 if __name__ == "__main__":
@@ -198,8 +222,9 @@ if __name__ == "__main__":
             sys.exit(0)
 
     try:
+        sys.stdout.write('\033[?25l\033[2J')
         show_video(Args)
     except KeyboardInterrupt:
         pass
     finally:
-        print('\033[0m')
+        sys.stdout.write(f'\033[0m\033[?25h\033[9999H')

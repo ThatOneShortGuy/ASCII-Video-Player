@@ -57,7 +57,7 @@ static PyObject *cpredict_insert_color_size(PyObject *self, PyObject *args){
             }
             // printf("Length: %d\n\n", length);
         }
-        length++;
+        length+=3;
     }
     // printf("Length: %d\n", length);
     Py_DECREF(img);
@@ -119,8 +119,7 @@ static PyObject *cinsert_color(PyObject *self, PyObject *args){
             new_string[length] = char_string;
             length += 1;
         }
-        new_string[length] = L'\n';
-        length += 1;
+        length += swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[E", change);;
         // wprintf(L"%ls", new_string);
     }
     PyObject *ret = PyUnicode_FromWideChar(new_string, length);
