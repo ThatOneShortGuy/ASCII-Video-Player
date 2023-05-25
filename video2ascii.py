@@ -22,6 +22,7 @@ class Args:
     debug = False
     freq = 30
     no_ascii = False
+    max_chars = MAX_CHARS
     size = SIZE
     start_time = 0
     fps = None
@@ -140,7 +141,7 @@ def show_video(args: Args):
     console_height = os.get_terminal_size()[1]
     get_video_size(args)
     displayed_frame_count = 0
-    sys.stdout.write(f'\033[{(console_height-Args.size[1]+1)//2}H\033[s')
+    sys.stdout.write(f'\033[{(console_height-args.size[1]+1)//2}H\033[s')
     skipped_frames = 0
     for i, frame in enumerate(read_video(args, start_time=start)):
         if frame is None:
@@ -152,10 +153,10 @@ def show_video(args: Args):
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = '\033[E'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) + '\033[E' if args.no_ascii else img2ascii(colorless_frame, ascii_map)
         
-        while freq > 1 and cpredict_insert_color_size(frame, freq) < MAX_CHARS - 200:
+        while freq > 1 and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
             freq -= 5
         freq = max(freq, 1)
-        while cpredict_insert_color_size(frame, freq) > MAX_CHARS and freq < 255:
+        while cpredict_insert_color_size(frame, freq) > args.max_chars and freq < 255:
             freq += 1
         ns = cinsert_color(s, frame, freq) if not args.colorless else s
         
@@ -179,7 +180,7 @@ if __name__ == "__main__":
         -h : Show this help message
 
         -d, --debug : Show debug information (default: {Args.debug})
-        -f <freq>, -c <freq> : Color sample frequency. Can't be lower than 1 or greater than the width (default: {Args.freq})
+        -m <max_chars>, --max-chars <max_chars> : Maximum number of characters to display (default: {Args.max_chars})
         --no-ascii : Don't use ascii characters to represent the video (default: {Args.no_ascii})
         --no-color : Don't use color in the output (default: {Args.colorless})
         -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
@@ -204,8 +205,8 @@ if __name__ == "__main__":
             Args.colorless = True
         elif val in ('-d', '--debug'):
             Args.debug = True
-        elif val in ('-f', '-c'):
-            Args.freq = int(sys.argv.pop(1))
+        elif val in ('-m', '--max-chars'):
+            Args.max_chars = int(sys.argv.pop(1))
         elif val in ('--no-ascii'):
             Args.no_ascii = True
         elif val in ('-r', '--fps'):
