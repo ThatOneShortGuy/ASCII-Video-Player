@@ -10,8 +10,8 @@ import numpy as np
 from cimg2ascii import cinsert_color, cpredict_insert_color_size
 from img2ascii import img2ascii, load_ascii_map
 
-SIZE = 170, -1
-MAX_CHARS = 65000
+SIZE = 250, -1
+MAX_CHARS = 32500
 
 print(io.DEFAULT_BUFFER_SIZE)
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=2)
