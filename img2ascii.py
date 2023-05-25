@@ -74,8 +74,8 @@ def main():
     no_color_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     s = '\n'.join('█' * w for _ in range(h)) + '\n' if Args.no_ascii else img2ascii(no_color_img, ascii_map)
     ns = s if Args.colorless else cinsert_color(s, img, freq)
-    print(ns)
-    print('\033[0m')
+    ns = ns.replace('\033[E', '\n')
+    sys.stdout.write(f'\033[2J\033[1H{ns}\033[m')
     return ns
 
 if __name__ == "__main__":

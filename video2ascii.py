@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 import time
-
 import cv2
 import numpy as np
 
@@ -14,7 +13,6 @@ SIZE = 250, -1
 MAX_CHARS = 32500
 
 print(io.DEFAULT_BUFFER_SIZE)
-sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=2)
 
 class Args:
     video_path = 'crf18.mp4'
@@ -23,6 +21,7 @@ class Args:
     freq = 30
     no_ascii = False
     max_chars = MAX_CHARS
+    min_freq = 10
     size = SIZE
     start_time = 0
     fps = None
@@ -57,16 +56,25 @@ def process_ffmpeg_args(args):
     return vfilters, afilters, ' '.join(extras)
 
 def get_video_size(args: Args):
+    terminal_size = os.get_terminal_size()
+    w, h = get_vid_dim(args.video_path)
+
     if args.size[0] == -1:
-        w, h = get_vid_dim(args.video_path)
         size = int(w * args.size[1] / h *2), args.size[1]
     elif args.size[1] == -1:
-        w, h = get_vid_dim(args.video_path)
         size = args.size[0], int(h * args.size[0] / w / 2)
     else:
         size = args.size
     
     args.size = size
+
+    if size[0] > terminal_size[0]:
+        args.size = terminal_size[0]-2, -1
+        args.size = get_video_size(args)
+    elif size[1] > terminal_size[1]:
+        args.size = -1, terminal_size[1]-1 *args.debug
+        args.size = get_video_size(args)
+    
     return size
 
 def read_video(args: Args, start_time=None):
@@ -95,6 +103,9 @@ def read_video(args: Args, start_time=None):
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
+    
+    sleep_command = 'ping 127.0.0.1 ' + ('-n 2 > nul' if os.name == 'nt' else '-c 2 > /dev/null')
+
     vida = subprocess.Popen(
         f'ffmpeg -i "{args.video_path}" -vn -f wav {f"-af {afilters}" if afilters else ""} {ffmpeg} -',
         shell=True,
@@ -114,7 +125,8 @@ def read_video(args: Args, start_time=None):
         audio=False
     try:
         # data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
-        p.stderr.read(69)
+        while 'nan' in (data := p.stderr.read(69).decode()):
+            pass
         sys.stdout.write('\033[2J')
         yield data
         if start_time is not None:
@@ -153,9 +165,9 @@ def show_video(args: Args):
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else img2ascii(colorless_frame, ascii_map)
         
-        while freq > 1 and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
+        while freq > args.min_freq and cpredict_insert_color_size(frame, freq) < args.max_chars - 200:
             freq -= 5
-        freq = max(freq, 1)
+        freq = max(freq, args.min_freq)
         while cpredict_insert_color_size(frame, freq) > args.max_chars and freq < 255:
             freq += 1
         ns = cinsert_color(s, frame, freq) if not args.colorless else s
@@ -165,7 +177,7 @@ def show_video(args: Args):
         
         displayed_frame_count += 1
 
-        data_str = f'freq: {str(freq).ljust(3)}skipped frames: {str(skipped_frames).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
+        data_str = f'freq: {str(freq).ljust(3)}dropped frames: {str(skipped_frames).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
         sys.stdout.write(f'\033[u\033[0m{data_str}\033[E{ns}'
                          if args.debug else f'\033[u{ns}')
 
@@ -174,13 +186,14 @@ if __name__ == "__main__":
     
     # Add args if python run in debug mode
     if sys.gettrace():
-        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d', '-s', '10:-1', '-t', '2.5'])
+        sys.argv.extend(['D:\RIFE app\Waifu Racks\out.mkv','-d', '-s', '10:-1', '-t', '2.5', '--ffmpeg', '-t', '10'])
     usage = f'''\nUsage: vid2ascii.py <input_file> [options]\n
     Options:
         -h : Show this help message
 
         -d, --debug : Show debug information (default: {Args.debug})
         -m <max_chars>, --max-chars <max_chars> : Maximum number of characters to display (default: {Args.max_chars})
+        -mf <min_freq>, --min-freq <min_freq> : Minimum threshold for color change to display (default: {Args.min_freq})
         --no-ascii : Don't use ascii characters to represent the video (default: {Args.no_ascii})
         --no-color : Don't use color in the output (default: {Args.colorless})
         -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
@@ -207,6 +220,8 @@ if __name__ == "__main__":
             Args.debug = True
         elif val in ('-m', '--max-chars'):
             Args.max_chars = int(sys.argv.pop(1))
+        elif val in ('-mf', '--min-freq'):
+            Args.min_freq = int(sys.argv.pop(1))
         elif val in ('--no-ascii'):
             Args.no_ascii = True
         elif val in ('-r', '--fps'):

@@ -23,7 +23,7 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 - ffplay [for the video to ASCII converter] (you will need to have the ffplay executable in your PATH environment for audio playback)
 
 To install the dependencies, run the following command:
-```bash
+```shell
 pip install -U opencv-python
 ```
 
@@ -55,7 +55,7 @@ python video2ascii.py <video path> [options]
 
 ## Image to ASCII Art
 Then you can run the image to ASCII art converter by running the following command:
-```bash
+```shell
 python img2ascii.py <image path> [options]
 ```
 
