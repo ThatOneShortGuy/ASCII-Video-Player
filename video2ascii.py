@@ -11,7 +11,7 @@ from cimg2ascii import cinsert_color, cpredict_insert_color_size
 from img2ascii import img2ascii, load_ascii_map
 
 SIZE = 170, -1
-MAX_CHARS = 49000
+MAX_CHARS = 65000
 
 print(io.DEFAULT_BUFFER_SIZE)
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=2)
@@ -141,10 +141,12 @@ def show_video(args: Args):
     get_video_size(args)
     displayed_frame_count = 0
     sys.stdout.write(f'\033[{(console_height-Args.size[1]+1)//2}H\033[s')
+    skipped_frames = 0
     for i, frame in enumerate(read_video(args, start_time=start)):
         if frame is None:
             break
         if i+3 < args.fps * (time.time() - start[0]):
+            skipped_frames += 1
             continue
         
         colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -162,7 +164,7 @@ def show_video(args: Args):
         
         displayed_frame_count += 1
 
-        data_str = f'freq: {str(freq).ljust(3)}frame: {str(i).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
+        data_str = f'freq: {str(freq).ljust(3)}skipped frames: {str(skipped_frames).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
         sys.stdout.write(f'\033[u\033[0m{data_str}\033[E{ns}'
                          if args.debug else f'\033[u{ns}')
 
