@@ -19,6 +19,7 @@ class Args:
     colorless = False
     debug = False
     freq = 30
+    interlace = 1
     no_ascii = False
     max_chars = MAX_CHARS
     min_freq = 10
@@ -154,6 +155,7 @@ def show_video(args: Args):
     displayed_frame_count = 0
     sys.stdout.write(f'\033[{(console_height-args.size[1]+1)//2}H\033[s')
     skipped_frames = 0
+    interlace_start = 0
     for i, frame in enumerate(read_video(args, start_time=start)):
         if frame is None:
             break
@@ -163,13 +165,14 @@ def show_video(args: Args):
         
         # colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else cimg2ascii(frame, ascii_map)
-        freq = cget_freq(freq, args.min_freq, frame, args.max_chars)
-        ns = cinsert_color(s, frame, freq) if not args.colorless else s
+        freq = cget_freq(freq, args.min_freq, frame, args.max_chars, interlace_start, args.interlace)
+        ns = cinsert_color(s, frame, freq, interlace_start, args.interlace) if not args.colorless else s
         
         while i > args.fps * (time.time() - start[0]):
             pass
         
         displayed_frame_count += 1
+        interlace_start = (interlace_start + 1) % args.interlace
 
         data_str = f'freq: {str(freq).ljust(3)}dropped frames: {str(skipped_frames).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
         sys.stdout.write(f'\033[u\033[0m{data_str}\033[E{ns}'
@@ -186,6 +189,7 @@ if __name__ == "__main__":
         -h : Show this help message
 
         -d, --debug : Show debug information (default: {Args.debug})
+        -i [n], --interlace [n] : Interlace the video by n (optional) rows. 1 means no interlace. If only `-i` is specified, default to 2. Must be greater than 0 (default: {Args.interlace})
         -m <max_chars>, --max-chars <max_chars> : Maximum number of characters to display (default: {Args.max_chars})
         -mf <min_freq>, --min-freq <min_freq> : Minimum threshold for color change to display (default: {Args.min_freq})
         --no-ascii : Don't use ascii characters to represent the video (default: {Args.no_ascii})
@@ -206,32 +210,58 @@ if __name__ == "__main__":
     if not os.path.isfile(Args.video_path):
         print(f'File "{Args.video_path}" not found')
         sys.exit(1)
-    while len(sys.argv) > 1:
-        val = sys.argv.pop(1)
-        if val in ('--no-color'):
-            Args.colorless = True
-        elif val in ('-d', '--debug'):
-            Args.debug = True
-        elif val in ('-m', '--max-chars'):
-            Args.max_chars = int(sys.argv.pop(1))
-        elif val in ('-mf', '--min-freq'):
-            Args.min_freq = int(sys.argv.pop(1))
-        elif val in ('--no-ascii'):
-            Args.no_ascii = True
-        elif val in ('-r', '--fps'):
-            Args.fps = int(sys.argv.pop(1))
-        elif val in ('-s'):
-            Args.size = tuple(map(int, sys.argv.pop(1).split(':')))
-        elif val in ('-ss'):
-            Args.start_time = float(sys.argv.pop(1))
-        elif val in ('-t', '--tempo'):
-            Args.tempo = float(sys.argv.pop(1))
-        elif val in ('--ffmpeg'):
-            Args.ffmpeg = sys.argv[1:]
-            break
-        else:
-            print(usage)
-            sys.exit(0)
+    try:
+        while len(sys.argv) > 1:
+            val = sys.argv.pop(1)
+            if val in ('-d', '--debug'):
+                Args.debug = True
+            elif val in ('-i', '--interlace'):
+                if len(sys.argv) > 1 and sys.argv[1][0] != '-':
+                    Args.interlace = int(sys.argv.pop(1))
+                    if Args.interlace < 1:
+                        sys.stdout.write('Interlace must be greater than 0\n')
+                        raise Exception
+                else:
+                    Args.interlace = 2
+            elif val in ('-m', '--max-chars'):
+                Args.max_chars = int(sys.argv.pop(1))
+                if Args.max_chars < 1:
+                    sys.stdout.write('Max chars must be greater than 0\n')
+                    raise Exception
+            elif val in ('-mf', '--min-freq'):
+                Args.min_freq = int(sys.argv.pop(1))
+            elif val in ('--no-ascii'):
+                Args.no_ascii = True
+            elif val in ('--no-color'):
+                Args.colorless = True
+            elif val in ('-r', '--fps'):
+                Args.fps = int(sys.argv.pop(1))
+                if Args.fps < 1:
+                    sys.stdout.write('FPS must be greater than 0\n')
+                    raise Exception
+            elif val in ('-s'):
+                Args.size = tuple(map(int, sys.argv.pop(1).split(':')))
+                if len(Args.size) != 2:
+                    sys.stdout.write('Invalid size\n')
+            elif val in ('-ss'):
+                Args.start_time = float(sys.argv.pop(1))
+                if Args.start_time < 0:
+                    sys.stdout.write('Start time must be greater than 0\n')
+                    raise Exception
+            elif val in ('-t', '--tempo'):
+                Args.tempo = float(sys.argv.pop(1))
+                if Args.tempo <= 0:
+                    sys.stdout.write('Tempo must be greater than 0\n')
+                    raise Exception
+            elif val in ('--ffmpeg'):
+                Args.ffmpeg = sys.argv[1:]
+                break
+            else:
+                print(usage)
+                sys.exit(0)
+    except Exception as e:
+        print(usage)
+        sys.exit(0)
 
     try:
         sys.stdout.write('\033[?25l\033[2J')

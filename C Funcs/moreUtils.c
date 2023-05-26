@@ -44,17 +44,19 @@ int get_pixel(Pixel *pix, PyObject *img, int col, int row) {
     return 0;
 }
 
-int predict_insert_color_size(int h, int w, PyObject *img, int threshold_of_change) {
+int predict_insert_color_size(int h, int w, PyObject *img, int threshold_of_change, int interlace_start, int interlace) {
 
     Pixel current_color;
     YCbCr prev_YCbCr = { 255, 255, 255 };
     YCbCr YCbCr_color;
 
     int length = 0;
-    int change;
     // printf("Threshold of change: %zd\n", threshold_of_change);
+    if (interlace_start > 0) {
+        length += 5;
+    }
 
-    for (int col=0; col < h; ++col) {
+    for (int col=interlace_start; col < h; col+=interlace) {
         for (int row=0; row < w; ++row) {
             get_pixel(&current_color, img, col, row);
 
@@ -64,7 +66,7 @@ int predict_insert_color_size(int h, int w, PyObject *img, int threshold_of_chan
             // if (YCbCr_color.y < threshold_of_change && row_continual(img, col, row, w, threshold_of_change)) break;
 
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
-                if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
+                if (check_in_ansi_range(&YCbCr_color, threshold_of_change)==-1) {
                     length += 7;
                     length += 4*(current_color.r>=100) + 3*(current_color.r>=10 && current_color.r<100) + 2*(current_color.r<10); // Extra 1 for the semicolon
                     length += 4*(current_color.g>=100) + 3*(current_color.g>=10 && current_color.g<100) + 2*(current_color.g<10);
@@ -79,17 +81,17 @@ int predict_insert_color_size(int h, int w, PyObject *img, int threshold_of_chan
             }
             // printf("Length: %d\n\n", length);
         }
-        length+=3;
+        length += 3 + 1*(interlace > 1);
     }
     return length;
 }
 
-int get_freq(long freq, long min_freq, int h, int w, PyObject *pyframe, long max_chars) {
-    while (freq > min_freq && predict_insert_color_size(h, w, pyframe, freq) < max_chars - 200) {
+int get_freq(long freq, long min_freq, int h, int w, PyObject *pyframe, long max_chars, int interlace_start, int interlace) {
+    while (freq > min_freq && predict_insert_color_size(h, w, pyframe, freq, interlace_start, interlace) < max_chars - 200) {
         freq -= 4;
     }
     freq = freq < min_freq ? min_freq : freq;
-    while (predict_insert_color_size(h, w, pyframe, freq) > max_chars && freq < 255) {
+    while (predict_insert_color_size(h, w, pyframe, freq, interlace_start, interlace) > max_chars && freq < 255) {
         freq += 1;
     }
     return freq;

@@ -13,18 +13,20 @@
 #define COLOR_SIZE 20
 
 static PyObject *py_predict_insert_color_size(PyObject *self, PyObject *args) {
-    PyObject *img, *pythreshold_of_change;
-    if (!PyArg_ParseTuple(args, "OO", &img, &pythreshold_of_change)) {
+    PyObject *img, *pythreshold_of_change, *pyinterlace_start, *pyinterlace;
+    if (!PyArg_ParseTuple(args, "OOOO", &img, &pythreshold_of_change, &pyinterlace_start, &pyinterlace)) {
         printf("Error parsing args\n");
         return NULL;
     }
     img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
     int threshold_of_change = (int) PyLong_AsLong(pythreshold_of_change);
+    int interlace_start = (int) PyLong_AsLong(pyinterlace_start);
+    int interlace = (int) PyLong_AsLong(pyinterlace);
     
     int h = (int) PyArray_DIM(img, 0);
     int w = (int) PyArray_DIM(img, 1);
 
-    int length = predict_insert_color_size(h, w, img, threshold_of_change);
+    int length = predict_insert_color_size(h, w, img, threshold_of_change, interlace_start, interlace);
     
     // printf("Length: %d\n", length);
     Py_DECREF(img);
@@ -33,8 +35,8 @@ static PyObject *py_predict_insert_color_size(PyObject *self, PyObject *args) {
 }
 
 static PyObject *py_insert_color(PyObject *self, PyObject *args) {
-    PyObject *s, *img, *pythreshold_of_change;
-    if (!PyArg_ParseTuple(args, "OOO", &s, &img, &pythreshold_of_change)) {
+    PyObject *s, *img, *pythreshold_of_change, *pyinterlace_start, *pyinterlace;
+    if (!PyArg_ParseTuple(args, "OOOOO", &s, &img, &pythreshold_of_change, &pyinterlace_start, &pyinterlace)) {
         printf("Error parsing args\n");
         return NULL;
     }
@@ -42,6 +44,9 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
     Py_ssize_t string_len = PyUnicode_GetLength(s);
     img = PyArray_FROM_OTF(img, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
     int threshold_of_change = (int) PyLong_AsLong(pythreshold_of_change);
+    int interlace_start = (int) PyLong_AsLong(pyinterlace_start);
+    int interlace = (int) PyLong_AsLong(pyinterlace);
+
     wchar_t *string = PyUnicode_AsWideCharString(s, &string_len);
 
     int h = (int) PyArray_DIM(img, 0);
@@ -54,8 +59,12 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
     wchar_t char_string;
     wchar_t *new_string = malloc(sizeof(wchar_t) * (string_len * 19 + 1));
     int change, len;
+
+    if (interlace_start > 0) {
+        length += swprintf(new_string + length, 5, L"\033[%dE", interlace_start);
+    }
     
-    for (int col=0; col < h; ++col) {
+    for (int col=interlace_start; col < h; col+=interlace) {
         for (int row=0; row < w; ++row) {
             get_pixel(&current_color, img, col, row);
             char_string = string[col*(w+1) + row];
@@ -71,12 +80,7 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
                 if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
                     len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
                 } else {
-                    len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[%dm", change);
-                }
-                // printf("%dx%d len: %d\n", row, col, len);
-                if (len == -1) {
-                    printf("Error copying color string\n");
-                    return NULL;
+                    len = swprintf(new_string + length, 7, L"\033[%dm", change);
                 }
             
                 length += len;
@@ -86,7 +90,7 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
             new_string[length] = char_string;
             length += 1;
         }
-        length += swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[E");;
+        length += (interlace == 1) ? swprintf(new_string + length, 4, L"\033[E") : swprintf(new_string + length, 6, L"\033[%dE", interlace);
         // wprintf(L"%ls", new_string);
     }
     PyObject *ret = PyUnicode_FromWideChar(new_string, length);
@@ -134,8 +138,8 @@ static PyObject *py_img2ascii(PyObject *self, PyObject *args) {
 }
 
 static PyObject *py_get_freq(PyObject *self, PyObject *args) {
-    PyObject *pyfreq, *pymin_freq, *pyframe, *pymax_chars;
-    if (!PyArg_ParseTuple(args, "OOOO", &pyfreq, &pymin_freq, &pyframe, &pymax_chars)) {
+    PyObject *pyfreq, *pymin_freq, *pyframe, *pymax_chars, *pyinterlace_start, *pyinterlace;
+    if (!PyArg_ParseTuple(args, "OOOOOO", &pyfreq, &pymin_freq, &pyframe, &pymax_chars, &pyinterlace_start, &pyinterlace)) {
         printf("Error parsing args in get_freq\n");
         return NULL;
     }
@@ -143,11 +147,13 @@ static PyObject *py_get_freq(PyObject *self, PyObject *args) {
     long min_freq = PyLong_AsLong(pymin_freq);
     pyframe = PyArray_FROM_OTF(pyframe, NPY_UINT8, NPY_ARRAY_IN_ARRAY);
     long max_chars = PyLong_AsLong(pymax_chars);
+    long interlace_start = PyLong_AsLong(pyinterlace_start);
+    long interlace = PyLong_AsLong(pyinterlace);
 
     int h = (int) PyArray_DIM(pyframe, 0);
     int w = (int) PyArray_DIM(pyframe, 1);
 
-    freq = get_freq(freq, min_freq, h, w, pyframe, max_chars);
+    freq = get_freq(freq, min_freq, h, w, pyframe, max_chars, interlace_start, interlace);
 
     Py_DECREF(pyframe);
     return PyLong_FromLong(freq);
