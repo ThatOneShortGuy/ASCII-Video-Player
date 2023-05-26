@@ -5,12 +5,16 @@
 # Table of Contents
 - [Introduction](#introduction)
 - [Dependencies](#dependencies)
-- [How to compile and run](#how-to-compile-and-run)
+- [How to compile](#how-to-compile)
+- [How to run](#how-to-run)
   - [Video to ASCII Art](#video-to-ascii-art)
     - [Options](#options)
   - [Image to ASCII Art](#image-to-ascii-art)
     - [Options](#options-1)
 - [Building from source](#building-from-source)
+  - [Requirements](#requirements)
+    - [Optional](#optional)
+  - [Building](#building)
 
 
 # Introduction
@@ -25,18 +29,21 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 
 To install the dependencies, run the following command:
 ```shell
-pip install -U opencv-python
+pip install -U opencv-python numpy
 ```
 
-# How to compile and run
+# How to compile
 You will need a compiler for C. On Windows, this is the [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
 
 Run the following command to compile the program:
-```
+```shell
 python "C Funcs\setup.py" build_ext --inplace
 ```
 
+# How to run
+
 ## Video to ASCII Art
+First, make sure you have installed the dependencies and have [compiled the C functions](#how-to-compile).
 Then you can run the ASCII video player by running the following command:
 ```shell
 python video2ascii.py <video path> [options]
@@ -88,7 +95,7 @@ pip install -U nuitka opencv-python
 - [upx](https://github.com/upx/upx/tree/devel) (for compressing the executable and other files) (recommended)
 
 ## Building
-Make sure you have first built the C functions locally as described in the [How to compile and run](#how-to-compile-and-run) section.
+Make sure you have first built the C functions locally as described in the [How to compile and run](#how-to-compile) section.
 Run the following command to build the executable:
 
 ```shell
