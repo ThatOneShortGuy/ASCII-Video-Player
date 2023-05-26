@@ -22,14 +22,13 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 
 # Dependencies and Requirements
 - Python 3.8+
-- cv2
 - numpy
 - ffmpeg [for the video to ASCII converter] (you will need to have the ffmpeg executable in your PATH environment)
 - ffplay [for the video to ASCII converter] (you will need to have the ffplay executable in your PATH environment for audio playback)
 
 To install the dependencies, run the following command:
 ```shell
-pip install -U opencv-python numpy
+pip install -U numpy
 ```
 
 # How to compile
@@ -83,12 +82,11 @@ It is recommended to use Python 3.11 for building because it has proven to make 
 - Python 3.8+
 - nuitka
 - numpy
-- opencv-python
 - suitable C compiler (Microsoft Visual C++ Build Tools on Windows)
 
 Install the python dependencies by running the following command:
 ```shell
-pip install -U nuitka opencv-python
+pip install -U nuitka numpy
 ```
 
 ### Optional
