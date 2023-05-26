@@ -24,11 +24,8 @@ start "cv2" upx %COMPRESS_FLAGS% dist\cv2\cv2.pyd
 start "cv2 ffmpeg" upx %COMPRESS_FLAGS% dist\cv2\*.dll
 start  "np libopenblas" upx %COMPRESS_FLAGS% dist\numpy\.libs\*
 start "vid2asc" upx %COMPRESS_FLAGS% dist\video2ascii.exe
-start "libffi" upx %COMPRESS_FLAGS% dist\libffi-8.dll
-start "python3" upx %COMPRESS_FLAGS% dist\python3.dll
-start "python311" upx %COMPRESS_FLAGS% dist\python311.dll
-start "ctypes" upx %COMPRESS_FLAGS% dist\_ctypes.pyd
-start "cimg2ascii" upx %COMPRESS_FLAGS% dist\cimg2ascii.pyd
+start "dlls" upx %COMPRESS_FLAGS% dist\*.dll
+start "pyds" upx %COMPRESS_FLAGS% dist\*.pyd
 start "np core" upx %COMPRESS_FLAGS% dist\numpy\core\*
 start "np fft" upx %COMPRESS_FLAGS% dist\numpy\fft\*
 start "np linalg" upx %COMPRESS_FLAGS% dist\numpy\linalg\*

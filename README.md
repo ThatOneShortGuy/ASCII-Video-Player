@@ -10,6 +10,7 @@
     - [Options](#options)
   - [Image to ASCII Art](#image-to-ascii-art)
     - [Options](#options-1)
+- [Building from source](#building-from-source)
 
 
 # Introduction
@@ -65,3 +66,33 @@ python img2ascii.py <image path> [options]
 - `-s <width>:<height>`: Size of the output image. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 266:-1)
 - `--no-ascii`: Don't use ascii characters to represent the image (default: False)
 - `--no-color`: Don't use color in the output (default: False)
+
+# Building from source
+Building the executable from source probably only works on Windows. That's why there is only the windows executable available.
+There may or may not be a performance increase when using the executable instead of the python scripts. I haven't done enough tests to prove statistical significance.
+It is recommended to use Python 3.11 for building because it has proven to make the fastest executable.
+
+## Requirements
+- Python 3.8+
+- nuitka
+- numpy
+- opencv-python
+- suitable C compiler (Microsoft Visual C++ Build Tools on Windows)
+
+Install the python dependencies by running the following command:
+```shell
+pip install -U nuitka opencv-python
+```
+
+### Optional
+- [upx](https://github.com/upx/upx/tree/devel) (for compressing the executable and other files) (recommended)
+
+## Building
+Make sure you have first built the C functions locally as described in the [How to compile and run](#how-to-compile-and-run) section.
+Run the following command to build the executable:
+
+```shell
+build.bat
+```
+
+By default, it will try to compress all the files heavily with the `--ultra-brute` option and will take a long time. If you don't want that to happen, change the `COMPRESS_FLAGS` in the [build.bat](build.bat) file to `--brute`, `--best`, or whatever you want.
