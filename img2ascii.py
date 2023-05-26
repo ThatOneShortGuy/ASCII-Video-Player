@@ -1,11 +1,12 @@
-import cv2
 import sys
 import os
+import subprocess
+import numpy as np
 from cimg2ascii import cinsert_color, cimg2ascii
 
 os.system("")
 
-SIZE = 120, -1
+SIZE = 266, -1
 COLOR_SAMPLE_FREQ = 1
 
 class Args:
@@ -24,6 +25,14 @@ def load_ascii_map(filename):
 def img2ascii(img, ascii_map):
     w, h = img.shape
     return ''.join(''.join(map(lambda x: ascii_map[x], img[i])) + '\n' for i in range(w))
+
+def read_img(path, w, h):
+    p = subprocess.Popen(f'ffmpeg -i "{path}" -vf scale={w}:{h} -f image2pipe -vcodec rawvideo -pix_fmt bgr24 -',
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    img = np.frombuffer(p.stdout.read(), dtype='uint8').reshape((h, w, 3))
+    p.stdout.close()
+    p.terminate()
+    return img
 
 def calc_ratio(w, h, img):
     ih, iw = img.shape[:2]
@@ -62,19 +71,15 @@ def main():
             print(help_message)
             sys.exit(0)
 
-    img = cv2.imread(input_file)
-    w, h = calc_ratio(Args.w, Args.h, img)
-    img = cv2.resize(img, (w, h))
-    freq = max(1, Args.freq)
+    img = read_img(input_file, Args.w, Args.h)
+    h, w = img.shape[:2]
     path_to_self = os.path.dirname(os.path.realpath(__file__))
     ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
-    # ns = get_colored_ascii(img, ascii_map, freq)
-    # print(ns)
-    # print(f"Length of old string: {len(ns)}")
-    no_color_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    s = '\n'.join('█' * w for _ in range(h)) + '\n' if Args.no_ascii else img2ascii(no_color_img, ascii_map)
-    ns = s if Args.colorless else cinsert_color(s, img, freq)
+
+    s = '\n'.join('█' * w for _ in range(h)) + '\n' if Args.no_ascii else cimg2ascii(img, ascii_map)
+    ns = s if Args.colorless else cinsert_color(s, img, Args.freq)
     ns = ns.replace('\033[E', '\n')
+
     sys.stdout.write(f'\033[2J\033[1H{ns}\033[m')
     return ns
 
