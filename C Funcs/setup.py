@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 if os.name == 'nt':
-    compile_args = ['/O2', '/fp:fast', '/arch:AVX2']
+    compile_args = ['/O2', '/fp:fast', '/arch:AVX2', '/GL']
 else:
     compile_args = ['-O3', '-ffast-math', '-march=native', '-funroll-loops']
 
