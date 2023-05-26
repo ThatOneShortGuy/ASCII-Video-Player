@@ -3,11 +3,10 @@ import os
 import subprocess
 import sys
 import time
-import cv2
 import numpy as np
 
-from cimg2ascii import cinsert_color, cpredict_insert_color_size, cimg2ascii, cget_freq
-from img2ascii import img2ascii, load_ascii_map
+from cimg2ascii import cinsert_color, cimg2ascii, cget_freq
+from img2ascii import load_ascii_map
 
 SIZE = 250, -1
 MAX_CHARS = 32500
@@ -30,17 +29,21 @@ class Args:
     ffmpeg = ''
 
 def get_vid_fps(path):
-    cap = cv2.VideoCapture(path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    cap.release()
+    p = subprocess.Popen(f'ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=r_frame_rate -i "{path}"',
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    fps = p.stdout.read().decode().split('/')
+    fps = int(fps[0])/int(fps[1])
+    p.stdout.close()
+    p.terminate()
     return fps
 
 def get_vid_dim(path):
-    cap = cv2.VideoCapture(path)
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    cap.release()
-    return w, h
+    p = subprocess.Popen(f'ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width,height -i "{path}"',
+                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    w, h = p.stdout.read().decode().split(',')
+    p.stdout.close()
+    p.terminate()
+    return int(w), int(h)
 
 def process_ffmpeg_args(args):
     vfilters = ''
@@ -104,9 +107,6 @@ def read_video(args: Args, start_time=None):
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
-    
-    sleep_command = 'ping 127.0.0.1 ' + ('-n 2 > nul' if os.name == 'nt' else '-c 2 > /dev/null')
-
     vida = subprocess.Popen(
         f'ffmpeg -i "{args.video_path}" -vn -f wav {f"-af {afilters}" if afilters else ""} {ffmpeg} -',
         shell=True,
@@ -125,7 +125,6 @@ def read_video(args: Args, start_time=None):
         time.sleep(2)
         audio=False
     try:
-        # data = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
         while 'nan' in (data := p.stderr.read(69).decode()):
             pass
         sys.stdout.write('\033[2J')
