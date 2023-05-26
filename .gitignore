@@ -17,3 +17,5 @@ ffmpeg.exe
 *.exe
 build/*
 numpy/*
+dist
+*.zip
