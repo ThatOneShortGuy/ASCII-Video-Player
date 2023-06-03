@@ -36,7 +36,7 @@ You will need a compiler for C. On Windows, this is the [Microsoft Visual C++ Bu
 
 Run the following command to compile the program:
 ```shell
-python "C Funcs/setup.py" build_ext --inplace
+python "C_Funcs/setup.py" build_ext --inplace
 ```
 
 # How to run

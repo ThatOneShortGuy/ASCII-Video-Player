@@ -8,7 +8,7 @@ else:
     compile_args = ['-O3', '-ffast-math', '-march=native', '-funroll-loops']
 
 module = Extension('cimg2ascii',
-                   sources = ['C Funcs/utils.c'],
+                   sources = ['C_Funcs/utils.c'],
                    extra_compile_args=compile_args)
 
 setup(name = 'cimg2ascii',

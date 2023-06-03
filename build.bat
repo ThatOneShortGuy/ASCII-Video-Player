@@ -5,7 +5,7 @@ set COMPRESS=1
 
 if exist dist rmdir /s /q dist
 
-py -3.11 "C Funcs/setup.py" build_ext --inplace
+py -3.11 "C_Funcs/setup.py" build_ext --inplace
 py -3.11 -m nuitka --standalone --include-data-files=ascii_darkmap.dat=ascii_darkmap.dat video2ascii.py
 
 mkdir dist
