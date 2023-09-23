@@ -44,6 +44,54 @@ int get_pixel(Pixel *pix, PyObject *img, int col, int row) {
     return 0;
 }
 
+int row_continual(PyObject *img, int col, int row, int w, int threshold_of_change){
+    Pixel pix1;
+    YCbCr colors;
+    while (row++ < w) {
+        get_pixel(&pix1, img, col, row);
+        to_YCbCr(&pix1, &colors);
+        if (colors.y > threshold_of_change) return 0;
+    }
+    return 1;
+}
+
+int check_in_ansi_range(YCbCr *pix, int threshold) {
+    YCbCr Black, DarkRed, DarkGreen, DarkYellow, DarkBlue, DarkMagenta, DarkCyan, DarkWhite, BrightBlack, BrightRed, BrightGreen, BrightYellow, BrightBlue, BrightMagenta, BrightCyan, White;
+    Black.y = 0; Black.cb = 128; Black.cr = 128;
+    DarkRed.y = 71; DarkRed.cb = 105; DarkRed.cr = 218;
+    DarkGreen.y = 102; DarkGreen.cb = 78; DarkGreen.cr = 69;
+    DarkYellow.y = 149; DarkYellow.cb = 44; DarkYellow.cr = 159;
+    DarkBlue.y = 57; DarkBlue.cb = 219; DarkBlue.cr = 87;
+    DarkMagenta.y = 71; DarkMagenta.cb = 173; DarkMagenta.cr = 174;
+    DarkCyan.y = 131; DarkCyan.cb = 179; DarkCyan.cr = 76;
+    DarkWhite.y = 204; DarkWhite.cb = 128; DarkWhite.cr = 128;
+    BrightBlack.y = 118; BrightBlack.cb = 128; BrightBlack.cr = 128;
+    BrightRed.y = 121; BrightRed.cb = 108; BrightRed.cr = 206;
+    BrightGreen.y = 124; BrightGreen.cb = 65; BrightGreen.cr = 55;
+    BrightYellow.y = 235; BrightYellow.cb = 89; BrightYellow.cr = 138;
+    BrightBlue.y = 117; BrightBlue.cb = 206; BrightBlue.cr = 87;
+    BrightMagenta.y = 72; BrightMagenta.cb = 177; BrightMagenta.cr = 205;
+    BrightCyan.y = 179; BrightCyan.cb = 148; BrightCyan.cr = 70;
+    White.y = 242; White.cb = 128; White.cr = 128;
+    if (!compare_YCbCr_values(pix, &Black,         threshold/2)) return 30;
+    if (!compare_YCbCr_values(pix, &DarkRed,       threshold/2)) return 31;
+    if (!compare_YCbCr_values(pix, &DarkGreen,     threshold/2)) return 32;
+    if (!compare_YCbCr_values(pix, &DarkYellow,    threshold/2)) return 33;
+    if (!compare_YCbCr_values(pix, &DarkBlue,      threshold/2)) return 34;
+    if (!compare_YCbCr_values(pix, &DarkMagenta,   threshold/2)) return 35;
+    if (!compare_YCbCr_values(pix, &DarkCyan,      threshold/2)) return 36;
+    if (!compare_YCbCr_values(pix, &DarkWhite,     threshold/4)) return 37;
+    if (!compare_YCbCr_values(pix, &BrightBlack,   threshold/2)) return 90;
+    if (!compare_YCbCr_values(pix, &BrightRed,     threshold/2)) return 91;
+    if (!compare_YCbCr_values(pix, &BrightGreen,   threshold/2)) return 92;
+    if (!compare_YCbCr_values(pix, &BrightYellow,  threshold/2)) return 93;
+    if (!compare_YCbCr_values(pix, &BrightBlue,    threshold/2)) return 94;
+    if (!compare_YCbCr_values(pix, &BrightMagenta, threshold/2)) return 95;
+    if (!compare_YCbCr_values(pix, &BrightCyan,    threshold/2)) return 96;
+    if (!compare_YCbCr_values(pix, &White,         threshold/4)) return 97;
+    return -1;
+}
+
 int predict_insert_color_size(int h, int w, PyObject *img, int threshold_of_change, int interlace_start, int interlace) {
 
     Pixel current_color;
@@ -95,52 +143,4 @@ int get_freq(long freq, long min_freq, int h, int w, PyObject *pyframe, long max
         freq += 1;
     }
     return freq;
-}
-
-int row_continual(PyObject *img, int col, int row, int w, int threshold_of_change){
-    Pixel pix1;
-    YCbCr colors;
-    while (row++ < w) {
-        get_pixel(&pix1, img, col, row);
-        to_YCbCr(&pix1, &colors);
-        if (colors.y > threshold_of_change) return 0;
-    }
-    return 1;
-}
-
-int check_in_ansi_range(YCbCr *pix, int threshold) {
-    YCbCr Black, DarkRed, DarkGreen, DarkYellow, DarkBlue, DarkMagenta, DarkCyan, DarkWhite, BrightBlack, BrightRed, BrightGreen, BrightYellow, BrightBlue, BrightMagenta, BrightCyan, White;
-    Black.y = 0; Black.cb = 128; Black.cr = 128;
-    DarkRed.y = 71; DarkRed.cb = 105; DarkRed.cr = 218;
-    DarkGreen.y = 102; DarkGreen.cb = 78; DarkGreen.cr = 69;
-    DarkYellow.y = 149; DarkYellow.cb = 44; DarkYellow.cr = 159;
-    DarkBlue.y = 57; DarkBlue.cb = 219; DarkBlue.cr = 87;
-    DarkMagenta.y = 71; DarkMagenta.cb = 173; DarkMagenta.cr = 174;
-    DarkCyan.y = 131; DarkCyan.cb = 179; DarkCyan.cr = 76;
-    DarkWhite.y = 204; DarkWhite.cb = 128; DarkWhite.cr = 128;
-    BrightBlack.y = 118; BrightBlack.cb = 128; BrightBlack.cr = 128;
-    BrightRed.y = 121; BrightRed.cb = 108; BrightRed.cr = 206;
-    BrightGreen.y = 124; BrightGreen.cb = 65; BrightGreen.cr = 55;
-    BrightYellow.y = 235; BrightYellow.cb = 89; BrightYellow.cr = 138;
-    BrightBlue.y = 117; BrightBlue.cb = 206; BrightBlue.cr = 87;
-    BrightMagenta.y = 72; BrightMagenta.cb = 177; BrightMagenta.cr = 205;
-    BrightCyan.y = 179; BrightCyan.cb = 148; BrightCyan.cr = 70;
-    White.y = 242; White.cb = 128; White.cr = 128;
-    if (!compare_YCbCr_values(pix, &Black,         threshold/2)) return 30;
-    if (!compare_YCbCr_values(pix, &DarkRed,       threshold/2)) return 31;
-    if (!compare_YCbCr_values(pix, &DarkGreen,     threshold/2)) return 32;
-    if (!compare_YCbCr_values(pix, &DarkYellow,    threshold/2)) return 33;
-    if (!compare_YCbCr_values(pix, &DarkBlue,      threshold/2)) return 34;
-    if (!compare_YCbCr_values(pix, &DarkMagenta,   threshold/2)) return 35;
-    if (!compare_YCbCr_values(pix, &DarkCyan,      threshold/2)) return 36;
-    if (!compare_YCbCr_values(pix, &DarkWhite,     threshold/4)) return 37;
-    if (!compare_YCbCr_values(pix, &BrightBlack,   threshold/2)) return 90;
-    if (!compare_YCbCr_values(pix, &BrightRed,     threshold/2)) return 91;
-    if (!compare_YCbCr_values(pix, &BrightGreen,   threshold/2)) return 92;
-    if (!compare_YCbCr_values(pix, &BrightYellow,  threshold/2)) return 93;
-    if (!compare_YCbCr_values(pix, &BrightBlue,    threshold/2)) return 94;
-    if (!compare_YCbCr_values(pix, &BrightMagenta, threshold/2)) return 95;
-    if (!compare_YCbCr_values(pix, &BrightCyan,    threshold/2)) return 96;
-    if (!compare_YCbCr_values(pix, &White,         threshold/4)) return 97;
-    return -1;
 }

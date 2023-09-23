@@ -16,4 +16,4 @@ setup(name = 'cimg2ascii',
       description = 'This is a package for img2ascii including map_color',
       ext_modules=[module],
       include_dirs=[np.get_include()],
-      install_requires=['numpy', 'opencv-python'])
+      install_requires=['numpy'])
