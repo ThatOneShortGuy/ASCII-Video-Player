@@ -8,7 +8,7 @@ import numpy as np
 from cimg2ascii import cinsert_color, cimg2ascii, cget_freq
 from img2ascii import load_ascii_map
 
-SIZE = 250, -1
+SIZE = os.get_terminal_size()[0], -1
 MAX_CHARS = 32500
 
 print(io.DEFAULT_BUFFER_SIZE)
@@ -18,7 +18,7 @@ class Args:
     colorless = False
     debug = False
     freq = 30
-    interlace = 1
+    interlace = 2
     no_ascii = False
     max_chars = MAX_CHARS
     min_freq = 10
@@ -144,7 +144,7 @@ def read_video(args: Args, start_time=None):
             p.kill()
 
 def show_video(args: Args):
-    args.fps = get_vid_fps(args.video_path) * args.tempo if args.fps is None else args.fps
+    args.fps = get_vid_fps(args.video_path) * args.tempo * args.interlace if args.fps is None else args.fps
     path_to_self = os.path.dirname(os.path.realpath(__file__))
     ascii_map = load_ascii_map(os.path.join(path_to_self,'ascii_darkmap.dat'))
     start = [time.time()]
