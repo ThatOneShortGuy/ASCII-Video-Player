@@ -57,13 +57,18 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
     YCbCr YCbCr_color;
     int length = 0;
     wchar_t char_string;
-    wchar_t *new_string = malloc(sizeof(wchar_t) * (string_len * 19 + 1));
+    // sizeof(wchar_t) * 1000000
+    #define STRING_SIZE 10000000
+    wchar_t snew_string[STRING_SIZE];
+    wchar_t *new_string = snew_string;
+    if (string_len * 19 > STRING_SIZE) 
+        new_string = malloc(sizeof(wchar_t) * (string_len * 19 + 1));
+    
     int change, len;
 
     if (interlace_start > 0) {
         length += swprintf(new_string + length, 5, L"\033[%dE", interlace_start);
     }
-    
     for (int col=interlace_start; col < h; col+=interlace) {
         for (int row=0; row < w; ++row) {
             get_pixel(&current_color, img, col, row);
@@ -77,6 +82,7 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
             
             // Only change the color if the sum of the color differences (Cb + Cr) is greater than the threshold_of_change
             if (compare_YCbCr_values(&YCbCr_color, &prev_YCbCr, threshold_of_change)) {
+                // If the color is in the ANSI range, then use the ANSI escape code
                 if ((change=check_in_ansi_range(&YCbCr_color, threshold_of_change))==-1) {
                     len = swprintf(new_string + length, COLOR_SIZE*sizeof(wchar_t), L"\033[38;2;%d;%d;%dm", current_color.r, current_color.g, current_color.b);
                 } else {
@@ -94,7 +100,7 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
         // wprintf(L"%ls", new_string);
     }
     PyObject *ret = PyUnicode_FromWideChar(new_string, length);
-    free(new_string);
+    if (string_len * 19 > STRING_SIZE) free(new_string);
     // printf("Length: %d\n", length);
     PyMem_Free(string);
     Py_DECREF(img);
