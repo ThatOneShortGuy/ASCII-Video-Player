@@ -11,6 +11,9 @@
 #include "moreUtils.c"
 
 #define COLOR_SIZE 20
+#define STRING_SIZE 10000000
+
+static wchar_t snew_string[STRING_SIZE];
 
 static PyObject *py_predict_insert_color_size(PyObject *self, PyObject *args) {
     PyObject *img, *pythreshold_of_change, *pyinterlace_start, *pyinterlace;
@@ -58,8 +61,6 @@ static PyObject *py_insert_color(PyObject *self, PyObject *args) {
     int length = 0;
     wchar_t char_string;
     // sizeof(wchar_t) * 1000000
-    #define STRING_SIZE 10000000
-    wchar_t snew_string[STRING_SIZE];
     wchar_t *new_string = snew_string;
     if (string_len * 19 > STRING_SIZE) 
         new_string = malloc(sizeof(wchar_t) * (string_len * 19 + 1));
