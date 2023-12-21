@@ -3,13 +3,15 @@ import os
 import subprocess
 import sys
 import time
+from typing import Optional, Union
+
 import numpy as np
 
-from cimg2ascii import cinsert_color, cimg2ascii, cget_freq
+from cimg2ascii import cget_freq, cimg2ascii, cinsert_color
 from img2ascii import load_ascii_map
 
 SIZE = os.get_terminal_size()[0], -1
-MAX_CHARS = 32500
+MAX_CHARS = 65000
 
 print(io.DEFAULT_BUFFER_SIZE)
 
@@ -17,16 +19,17 @@ class Args:
     video_path = 'crf18.mp4'
     colorless = False
     debug = False
-    freq = 30
-    interlace = 2
+    freq: int = 30
+    interlace: int = 2
     no_ascii = False
     max_chars = MAX_CHARS
-    min_freq = 10
-    size = SIZE
-    start_time = 0
-    fps = None
-    tempo = 1
-    ffmpeg = ''
+    min_freq: int = 10
+    size: tuple[int, int] = SIZE
+    start_time: float = 0
+    fps: Optional[float] = None
+    tempo: float = 1
+    ffmpeg: Union[str, list[str]] = ''
+    output_file: Optional[str] = None
 
 def get_vid_fps(path):
     p = subprocess.Popen(f'ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=r_frame_rate -i "{path}"',
@@ -72,6 +75,9 @@ def get_video_size(args: Args):
     
     args.size = size
 
+    if args.output_file:
+        return size
+
     if size[0] > terminal_size[0]:
         args.size = terminal_size[0]-2, -1
         args.size = get_video_size(args)
@@ -113,19 +119,24 @@ def read_video(args: Args, start_time=None):
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL)
     
-    print('Loading video...')
+    print('Loading video...', file=sys.stderr)
     data = vidp.stdout.read(3*size[0]*size[1])
     data = np.frombuffer(data, dtype='uint8').reshape((size[1], size[0], 3))
     
-    try:
-        p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
-        audio=True
-    except FileNotFoundError:
-        print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
-        time.sleep(2)
+    if not args.output_file:
+        try:
+            p = subprocess.Popen('ffplay -nodisp -autoexit -loglevel error -stats -i pipe:0 -f wav', shell=True, stdin=vida.stdout, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
+            audio=True
+        except FileNotFoundError:
+            print("\n\033[31mCould not locate installation for FFplay.\nPlaying video without audio\033[0m")
+            time.sleep(2)
+            audio=False
+            p = None
+    else:
         audio=False
+        p = None
     try:
-        while 'nan' in (data := p.stderr.read(69).decode()):
+        while p is not None and 'nan' in (data := p.stderr.read(69).decode()):
             pass
         sys.stdout.write('\033[2J')
         yield data
@@ -158,22 +169,22 @@ def show_video(args: Args):
     for i, frame in enumerate(read_video(args, start_time=start)):
         if frame is None:
             break
-        if i+3 < args.fps * (time.time() - start[0]):
+        if not args.output_file and i+3 < args.fps * (time.time() - start[0]):
             skipped_frames += 1
             continue
         
         # colorless_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        s = 'n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else cimg2ascii(frame, ascii_map)
+        s = '\n'.join('█' * frame.shape[1] for _ in range(frame.shape[0])) if args.no_ascii else cimg2ascii(frame, ascii_map)
         freq = cget_freq(freq, args.min_freq, frame, args.max_chars, interlace_start, args.interlace)
         ns = cinsert_color(s, frame, freq, interlace_start, args.interlace) if not args.colorless else s
         
-        while i > args.fps * (time.time() - start[0]):
+        while not args.output_file and i > args.fps * (time.time() - start[0]):
             pass
         
         displayed_frame_count += 1
         interlace_start = (interlace_start + 1) % args.interlace
 
-        data_str = f'freq: {str(freq).ljust(3)}dropped frames: {str(skipped_frames).ljust(5)}fps: {str(round(displayed_frame_count/(time.time()-start[0]), 2)).ljust(6)}strlen: {len(ns)}'
+        data_str = f'freq: {freq:<3}dropped frames: {skipped_frames:<5}fps: {displayed_frame_count/(time.time()-start[0]): .2f} strlen: {len(ns)}'
         sys.stdout.write(f'\033[u\033[0m{data_str}\033[E{ns}'
                          if args.debug else f'\033[u{ns}')
 
@@ -193,6 +204,7 @@ if __name__ == "__main__":
         -mf <min_freq>, --min-freq <min_freq> : Minimum threshold for color change to display (default: {Args.min_freq})
         --no-ascii : Don't use ascii characters to represent the video (default: {Args.no_ascii})
         --no-color : Don't use color in the output (default: {Args.colorless})
+        -o <output_file>, --output <output_file> : Output file (default: stdout)
         -r <fps>, --fps <fps> : Framerate of the output video (default: video's framerate)
         -s <width>:<height> : Size/scale of the output video (default: {SIZE[0]}:{SIZE[1]})
         -ss : Skip to specified time in the video in seconds. (default: {Args.start_time})
@@ -239,7 +251,7 @@ if __name__ == "__main__":
                     sys.stdout.write('FPS must be greater than 0\n')
                     raise Exception
             elif val in ('-s'):
-                Args.size = tuple(map(int, sys.argv.pop(1).split(':')))
+                Args.size = tuple(map(int, sys.argv.pop(1).split(':'))) # type: ignore
                 if len(Args.size) != 2:
                     sys.stdout.write('Invalid size\n')
             elif val in ('-ss'):
@@ -255,6 +267,10 @@ if __name__ == "__main__":
             elif val in ('--ffmpeg'):
                 Args.ffmpeg = sys.argv[1:]
                 break
+            elif val in ('-o', '--output'):
+                file = sys.argv.pop(1)
+                sys.stdout = open(file, 'w', encoding='utf-8')
+                Args.output_file = file
             else:
                 print(usage)
                 sys.exit(0)

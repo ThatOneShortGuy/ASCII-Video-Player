@@ -24,6 +24,7 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 - Python 3.8+
 - numpy
 - ffmpeg [for the video to ASCII converter] (you will need to have the ffmpeg executable in your PATH environment)
+- ffprobe [for the video to ASCII converter] (you will need to have the ffprobe executable in your PATH environment)
 - ffplay [for the video to ASCII converter] (you will need to have the ffplay executable in your PATH environment for audio playback)
 
 To install the dependencies, run the following command:
@@ -51,11 +52,13 @@ python video2ascii.py <video path> [options]
 ### Options
 - `-h`: Show help message and exit
 - `-d`, `--debug`: Show debug information (default: False)
-- `-m <max_chars>`, `--max-chars <max_chars>` : Maximum number of characters to display (default: 32500)
+- `-i [n]`, `--interlace [n]` : Interlace the video by n (optional) rows. 1 means no interlace. If only `-i` is specified, default to 2. Must be greater than 0 (default: 2)
+- `-m <max_chars>`, `--max-chars <max_chars>` : Maximum number of characters to display (default: 65000)
 - `--no-ascii`: Don't use ascii characters to represent the video (default: False)
 - `--no-color`: Don't use color in the output (default: False)
+- `-o <output_file>`, `--output <output_file>` : Output file (default: stdout)
 - `-r <fps>`, `--fps <fps>`: Frames per second. The framerate to play the video back at (default: video's framerate)
-- `-s <width>:<height>`: Size of the output video. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 250:-1)
+- `-s <width>:<height>`: Size of the output video. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: your_console_width:-1)
 - `-ss`: Start at the specified time in the video in seconds. (default: 0)
 - `-t <tempo>`, `--tempo <tempo>` : Tempo of the output video (ex. 1x speed, 2x speed, 1.75x speed) (default: 1)
 - `--ffmpeg [...]`: All commands after this will be passed to ffmpeg video decoder. See [ffmpeg documentation](https://ffmpeg.org/ffmpeg.html) for more information (default: None)
@@ -74,7 +77,7 @@ python img2ascii.py <image path> [options]
 - `--no-color`: Don't use color in the output (default: False)
 
 # Building from source
-Building the executable from source probably only works on Windows. That's why there is only the windows executable available.
+Building the executable from source only works on Windows. That's why there is only the windows executable available.
 There may or may not be a performance increase when using the executable instead of the python scripts. I haven't done enough tests to prove statistical significance.
 It is recommended to use Python 3.11 for building because it has proven to make the fastest executable.
 

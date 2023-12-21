@@ -1,12 +1,13 @@
 @echo off
 
 set COMPRESS_FLAGS="--ultra-brute"
+@REM set COMPRESS_FLAGS="9"
 set COMPRESS=1
 
 if exist dist rmdir /s /q dist
 
 py -3.11 "C_Funcs/setup.py" build_ext --inplace
-py -3.11 -m nuitka --standalone --include-data-files=ascii_darkmap.dat=ascii_darkmap.dat video2ascii.py
+py -3.11 -m nuitka --standalone --include-data-files=ascii_darkmap.dat=ascii_darkmap.dat video2ascii.py --no-deployment-flag=self-execution
 
 mkdir dist
 
