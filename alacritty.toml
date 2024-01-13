@@ -1,0 +1,38 @@
+[colors.primary]
+background = "#000000"
+foreground = "#ffffff"
+
+[colors.normal]
+black = "#0C0C0C"
+red = "#0037DA"
+green = "#13A10E"
+yellow = "#3A96DD"
+blue = "#C50F1F"
+magenta = "#881798"
+cyan = "#C19C00"
+white = "#CCCCCC"
+
+[colors.bright]
+black = "#767676"
+red = "#3B78FF"
+green = "#16C60C"
+yellow = "#61D6D6"
+blue = "#E74856"
+magenta = "#B4009E"
+cyan = "#F9F1A5"
+white = "#F2F2F2"
+
+[font]
+normal = { family = "Consolas" }
+size = 3
+
+[window]
+startup_mode = "Fullscreen"
+
+[window.class]
+general = "Alacritty"
+instance = "Alacritty"
+
+[window.padding]
+x = 1
+y = 1
