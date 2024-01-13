@@ -19,3 +19,4 @@ build/*
 numpy/*
 dist
 *.zip
+*.so
