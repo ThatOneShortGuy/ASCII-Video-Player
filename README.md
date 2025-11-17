@@ -8,9 +8,9 @@
 - [How to compile](#how-to-compile)
 - [How to run](#how-to-run)
   - [Video to ASCII Art](#video-to-ascii-art)
-    - [Options](#options)
+    - [Options](#video-options)
   - [Image to ASCII Art](#image-to-ascii-art)
-    - [Options](#options-1)
+    - [Options](#image-options)
 - [Building from source](#building-from-source)
   - [Requirements](#requirements)
     - [Optional](#optional)
@@ -22,14 +22,14 @@ This program converts images or videos to colored ASCII art. It uses the in hous
 
 # Dependencies and Requirements
 - Python 3.8+
-- numpy
+- numpy (version 1.*)
 - ffmpeg [for the video to ASCII converter] (you will need to have the ffmpeg executable in your PATH environment)
 - ffprobe [for the video to ASCII converter] (you will need to have the ffprobe executable in your PATH environment)
 - ffplay [for the video to ASCII converter] (you will need to have the ffplay executable in your PATH environment for audio playback)
 
 To install the dependencies, run the following command:
 ```shell
-pip install -U numpy
+pip install -r requirements.txt
 ```
 
 # How to compile
@@ -49,7 +49,7 @@ Then you can run the ASCII video player by running the following command:
 python video2ascii.py <video path> [options]
 ```
 
-### Options
+### Video Options
 - `-h`: Show help message and exit
 - `-d`, `--debug`: Show debug information (default: False)
 - `-i [n]`, `--interlace [n]` : Interlace the video by n (optional) rows. 1 means no interlace. If only `-i` is specified, default to 2. Must be greater than 0 (default: 2)
@@ -69,7 +69,7 @@ Then you can run the image to ASCII art converter by running the following comma
 python img2ascii.py <image path> [options]
 ```
 
-### Options
+### Image Options
 - `-h`: Show help message and exit
 - `-f <freq>`, `-c <freq>`: Color frequency. The higher the integer, the higher threshold for changing color. (default: 1)
 - `-s <width>:<height>`: Size of the output image. Should be input as "width:height" with no spaces and numbers only. A negative one (-1) in any of the sizes will calculate the best size to maintain the image ratio (default: 266:-1)
