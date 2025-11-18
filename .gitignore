@@ -20,3 +20,5 @@ numpy/*
 dist
 *.zip
 *.so
+.python-version
+
